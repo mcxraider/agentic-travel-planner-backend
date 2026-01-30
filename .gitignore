@@ -6,7 +6,7 @@ venv/
 ClAUDE.md
 # C extensions
 *.so
-
+.vscode/
 # Distribution / packaging
 .Python
 build/
