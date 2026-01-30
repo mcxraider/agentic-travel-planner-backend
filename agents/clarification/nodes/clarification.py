@@ -6,6 +6,7 @@ or complete the clarification process.
 """
 
 import logging
+import time
 from typing import Dict, Any
 
 from agents.clarification.schemas import ClarificationState
@@ -19,10 +20,14 @@ from agents.clarification.response_parser import (
     build_state_update_for_completion,
     ParseError,
 )
-from agents.shared.llm.client import get_cached_client, get_llm_response
+from agents.shared.llm.client import get_cached_client, get_llm_response_with_usage
+from agents.shared.logging.debug_logger import get_or_create_logger
 
 
 logger = logging.getLogger("agents.clarification")
+
+# Default model for clarification
+DEFAULT_MODEL = "gpt-5-mini"
 
 
 def clarification_node(state: ClarificationState) -> Dict[str, Any]:
@@ -51,6 +56,10 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         system_prompt = build_system_prompt(state)
         user_prompt = build_user_prompt(state)
 
+        # Get debug logger from registry if session_id is available
+        session_id = state.get("session_id")
+        debug_logger = get_or_create_logger(session_id) if session_id else None
+
         # Log the call
         logger.info(
             f"Round {state['current_round']} - Calling LLM",
@@ -72,8 +81,29 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         print(f"   - completeness_score: {state.get('completeness_score', 0)}")
         print("=" * 80)
 
-        # Call LLM
-        llm_response = get_llm_response(client, user_prompt, system_prompt)
+        # Call LLM with timing
+        start_time = time.perf_counter()
+        llm_response, usage = get_llm_response_with_usage(
+            client, user_prompt, system_prompt, model=DEFAULT_MODEL
+        )
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        # Log to debug file
+        if debug_logger:
+            debug_logger.log_llm_call(
+                round_num=state["current_round"],
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response=llm_response,
+                duration_ms=duration_ms,
+                input_tokens=usage["input_tokens"],
+                output_tokens=usage["output_tokens"],
+                model=DEFAULT_MODEL,
+            )
+
+        # Print token usage to console
+        print(f"\n📈 Token Usage: {usage['input_tokens']} in / {usage['output_tokens']} out")
+        print(f"⏱️  LLM Duration: {duration_ms:.2f}ms")
 
         # Parse response
         is_complete, parsed_data = parse_clarification_response(llm_response)

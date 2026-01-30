@@ -5,6 +5,7 @@ Provides REST API for starting clarification sessions, submitting
 responses, and managing session state.
 """
 
+import time
 import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
@@ -23,6 +24,7 @@ from agents.clarification.schemas import (
 )
 from agents.clarification.graph.build import create_clarification_graph
 from agents.clarification.response_parser import merge_collected_data
+from agents.shared.logging.debug_logger import get_or_create_logger, remove_logger
 
 
 # Create router for clarification route
@@ -43,7 +45,7 @@ def get_graph():
     return _graph
 
 
-def create_initial_state(request: StartSessionRequest) -> ClarificationState:
+def create_initial_state(request: StartSessionRequest, session_id: str) -> ClarificationState:
     """Create initial state from a start session request."""
     start = datetime.strptime(request.start_date, "%Y-%m-%d")
     end = datetime.strptime(request.end_date, "%Y-%m-%d")
@@ -76,6 +78,8 @@ def create_initial_state(request: StartSessionRequest) -> ClarificationState:
         "user_response": None,
         "collected_data": {},
         "messages": [],
+        # Debug/tracking
+        "session_id": session_id,
     }
 
 
@@ -93,11 +97,17 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
     Returns:
         Session ID and first round of questions
     """
+    # Start API timing
+    api_start_time = time.perf_counter()
+
     # Generate session ID
     session_id = str(uuid.uuid4())
 
-    # Create initial state
-    initial_state = create_initial_state(request)
+    # Get or create debug logger from registry (ensures same instance is used)
+    debug_logger = get_or_create_logger(session_id)
+
+    # Create initial state with session_id
+    initial_state = create_initial_state(request, session_id)
 
     # Get graph and run first round
     graph = get_graph()
@@ -108,6 +118,14 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
         result = graph.invoke(initial_state, config)
 
         if result is None:
+            api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+            debug_logger.log_api_timing(
+                endpoint="/api/clarification/start",
+                duration_ms=api_duration_ms,
+                round_num=1,
+                success=False,
+                error="Graph execution failed - no result returned",
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Graph execution failed - no result returned",
@@ -124,6 +142,14 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
         questions_data = result.get("current_questions", {})
 
         if not questions_data:
+            api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+            debug_logger.log_api_timing(
+                endpoint="/api/clarification/start",
+                duration_ms=api_duration_ms,
+                round_num=1,
+                success=False,
+                error="No questions generated in first round",
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="No questions generated in first round",
@@ -143,6 +169,16 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
         ]
 
         state_info = questions_data.get("state", {})
+
+        # Log successful API timing
+        api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+        debug_logger.log_api_timing(
+            endpoint="/api/clarification/start",
+            duration_ms=api_duration_ms,
+            round_num=1,
+            success=True,
+        )
+
         print(result)
         return StartSessionResponse(
             session_id=session_id,
@@ -158,6 +194,14 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
     except HTTPException:
         raise
     except Exception as e:
+        api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+        debug_logger.log_api_timing(
+            endpoint="/api/clarification/start",
+            duration_ms=api_duration_ms,
+            round_num=1,
+            success=False,
+            error=str(e),
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to start session: {str(e)}",
@@ -178,6 +222,9 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
     Returns:
         Next questions or final collected data
     """
+    # Start API timing
+    api_start_time = time.perf_counter()
+
     session_id = request.session_id
 
     # Check session exists
@@ -188,11 +235,22 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
         )
 
     session = _sessions[session_id]
+
+    # Get debug logger from registry (same instance used across all calls)
+    debug_logger = get_or_create_logger(session_id)
     current_state = session["state"]
     config = session["config"]
+    current_round = current_state["current_round"]
 
     # Check if already complete
     if current_state.get("clarification_complete", False):
+        api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+        debug_logger.log_api_timing(
+            endpoint="/api/clarification/respond",
+            duration_ms=api_duration_ms,
+            round_num=current_round,
+            success=True,
+        )
         return RespondResponse(
             session_id=session_id,
             complete=True,
@@ -205,12 +263,14 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
         request.responses,
     )
 
-    # Prepare next state
+    # Prepare next state (include session_id for debug logging in nodes)
+    next_round = current_round + 1
     next_state = {
         "user_response": request.responses,
         "collected_data": new_collected_data,
-        "current_round": current_state["current_round"] + 1,
+        "current_round": next_round,
         "current_questions": None,
+        "session_id": session_id,
     }
 
     # Continue graph execution
@@ -220,6 +280,14 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
         result = graph.invoke(next_state, config)
 
         if result is None:
+            api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+            debug_logger.log_api_timing(
+                endpoint="/api/clarification/respond",
+                duration_ms=api_duration_ms,
+                round_num=next_round,
+                success=False,
+                error="Graph execution failed",
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Graph execution failed",
@@ -230,6 +298,17 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
 
         # Check if complete
         if result.get("clarification_complete", False):
+            api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+            debug_logger.log_api_timing(
+                endpoint="/api/clarification/respond",
+                duration_ms=api_duration_ms,
+                round_num=next_round,
+                success=True,
+            )
+            # Log session summary when clarification completes
+            debug_logger.log_session_summary(total_rounds=next_round)
+            # Clean up logger from registry to free memory
+            remove_logger(session_id)
             return RespondResponse(
                 session_id=session_id,
                 complete=True,
@@ -240,6 +319,14 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
         questions_data = result.get("current_questions", {})
 
         if not questions_data:
+            api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+            debug_logger.log_api_timing(
+                endpoint="/api/clarification/respond",
+                duration_ms=api_duration_ms,
+                round_num=next_round,
+                success=False,
+                error="No questions generated but clarification not complete",
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="No questions generated but clarification not complete",
@@ -259,6 +346,15 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
 
         state_info = questions_data.get("state", {})
 
+        # Log successful API timing
+        api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+        debug_logger.log_api_timing(
+            endpoint="/api/clarification/respond",
+            duration_ms=api_duration_ms,
+            round_num=next_round,
+            success=True,
+        )
+
         return RespondResponse(
             session_id=session_id,
             complete=False,
@@ -274,6 +370,14 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
     except HTTPException:
         raise
     except Exception as e:
+        api_duration_ms = (time.perf_counter() - api_start_time) * 1000
+        debug_logger.log_api_timing(
+            endpoint="/api/clarification/respond",
+            duration_ms=api_duration_ms,
+            round_num=next_round,
+            success=False,
+            error=str(e),
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process response: {str(e)}",
