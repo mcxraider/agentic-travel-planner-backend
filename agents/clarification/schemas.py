@@ -57,6 +57,9 @@ class ClarificationState(TypedDict):
     # Messages for tracking conversation history
     messages: Annotated[List[dict], operator.add]
 
+    # Debug/tracking
+    session_id: Optional[str]
+
 
 # =============================================================================
 # Question Models (Pydantic)

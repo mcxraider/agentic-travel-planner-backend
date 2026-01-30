@@ -6,7 +6,7 @@ automatic retries using tenacity.
 """
 
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 from openai import OpenAI
 from tenacity import (
@@ -103,3 +103,74 @@ def get_llm_response(
         {"role": "user", "content": user_prompt},
     ]
     return call_llm(messages, model=model, client=client)
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((Exception,)),
+    reraise=True,
+)
+def call_llm_with_usage(
+    messages: List[Dict[str, str]],
+    model: str = "gpt-4.1-mini",
+    client: Optional[OpenAI] = None,
+) -> Tuple[str, Dict[str, int]]:
+    """
+    Call the OpenAI Chat Completion API and return content with token usage.
+
+    Args:
+        messages: List of message dicts with 'role' and 'content' keys
+        model: Model identifier to use (default: gpt-4.1-mini)
+        client: Optional OpenAI client instance. If not provided, uses cached client.
+
+    Returns:
+        Tuple of (response content, usage dict with input/output/total tokens)
+
+    Raises:
+        Exception: If all retry attempts fail.
+    """
+    if client is None:
+        client = get_cached_client()
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+    )
+
+    content = response.choices[0].message.content.strip()
+    usage = {
+        "input_tokens": response.usage.prompt_tokens,
+        "output_tokens": response.usage.completion_tokens,
+        "total_tokens": response.usage.total_tokens,
+    }
+
+    return content, usage
+
+
+def get_llm_response_with_usage(
+    client: OpenAI,
+    user_prompt: str,
+    system_prompt: str,
+    model: str = "gpt-5-mini",
+) -> Tuple[str, Dict[str, int]]:
+    """
+    Get LLM response with token usage information.
+
+    This function is similar to get_llm_response but also returns
+    token usage for debugging and cost tracking.
+
+    Args:
+        client: OpenAI client instance
+        user_prompt: The user message content
+        system_prompt: The system message content
+        model: Model identifier to use
+
+    Returns:
+        Tuple of (response content, usage dict with input/output/total tokens)
+    """
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+    return call_llm_with_usage(messages, model=model, client=client)
