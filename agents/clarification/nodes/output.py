@@ -9,7 +9,10 @@ import logging
 from typing import Dict, Any
 
 from agents.clarification.schemas import ClarificationState
-from agents.shared.contracts.clarification_output import ClarificationOutput, ClarificationOutputV2
+from agents.shared.contracts.clarification_output import (
+    ClarificationOutput,
+    ClarificationOutputV2,
+)
 
 
 logger = logging.getLogger("agents.clarification")
@@ -44,7 +47,9 @@ def output_node(state: ClarificationState) -> Dict[str, Any]:
     print("=" * 80 + "\n")
 
     # Log structured event
-    collected_fields = [k for k, v in data.items() if v is not None and not k.startswith("_")]
+    collected_fields = [
+        k for k, v in data.items() if v is not None and not k.startswith("_")
+    ]
     logger.info(
         "Clarification complete (v2)",
         extra={

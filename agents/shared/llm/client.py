@@ -16,6 +16,7 @@ from tenacity import (
     retry_if_exception_type,
 )
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Module-level cache for OpenAI client

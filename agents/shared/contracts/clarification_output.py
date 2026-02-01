@@ -266,7 +266,9 @@ class ClarificationOutputV2(BaseModel):
             daily_rhythm=data.get("daily_rhythm"),
             downtime_preference=data.get("downtime_preference"),
             # Meta (handle underscore-prefixed keys from LLM)
-            conflicts_resolved=data.get("_conflicts_resolved") or data.get("conflicts_resolved") or [],
+            conflicts_resolved=data.get("_conflicts_resolved")
+            or data.get("conflicts_resolved")
+            or [],
             warnings=data.get("_warnings") or data.get("warnings") or [],
             # Metadata
             completeness_score=completeness_score,
@@ -283,7 +285,11 @@ class ClarificationOutputV2(BaseModel):
                 "tourist_vs_local": "balanced",
                 "mobility_level": "high (15k+/hiking)",
                 "dining_style": ["street food", "casual"],
-                "top_3_must_dos": {"1": "Mount Batur trek", "2": "Nusa Penida", "3": "Beach time"},
+                "top_3_must_dos": {
+                    "1": "Mount Batur trek",
+                    "2": "Nusa Penida",
+                    "3": "Beach time",
+                },
                 "transportation_mode": ["rental car", "walking/cycling"],
                 "arrival_time": "Early AM (<9am)",
                 "departure_time": "Afternoon (12-5pm)",
@@ -292,8 +298,12 @@ class ClarificationOutputV2(BaseModel):
                 "wifi_need": "Essential (daily work)",
                 "daily_rhythm": "early bird",
                 "downtime_preference": "some rest",
-                "conflicts_resolved": ["Pace vs relaxation: chose intense days with spa evenings"],
-                "warnings": ["Mount Batur + Nusa Penida both full-day; tight for 4 days"],
+                "conflicts_resolved": [
+                    "Pace vs relaxation: chose intense days with spa evenings"
+                ],
+                "warnings": [
+                    "Mount Batur + Nusa Penida both full-day; tight for 4 days"
+                ],
                 "completeness_score": 89,
                 "rounds_completed": 3,
             }

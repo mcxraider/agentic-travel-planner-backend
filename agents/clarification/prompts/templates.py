@@ -119,7 +119,6 @@ class SystemPromptConfigV2(BaseModel):
         )
 
 
-
 # =============================================================================
 # V2 System Prompt Template
 # =============================================================================
@@ -534,4 +533,3 @@ OR
 
 Then output "Clarification Done" followed by the complete JSON object.
 """
-

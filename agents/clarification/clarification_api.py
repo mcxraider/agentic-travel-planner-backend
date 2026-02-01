@@ -55,7 +55,9 @@ def get_graph():
     return _graph
 
 
-def create_initial_state(request: StartSessionRequest, session_id: str) -> ClarificationState:
+def create_initial_state(
+    request: StartSessionRequest, session_id: str
+) -> ClarificationState:
     """Create initial state from a start session request."""
     start = datetime.strptime(request.start_date, "%Y-%m-%d")
     end = datetime.strptime(request.end_date, "%Y-%m-%d")
@@ -207,7 +209,9 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
                 conflicts_detected=state_info.get("conflicts_detected", []),
                 score=state_info.get("score", 0),
             ),
-            data=ClarificationDataV2(**data_info) if data_info else ClarificationDataV2(),
+            data=ClarificationDataV2(**data_info)
+            if data_info
+            else ClarificationDataV2(),
         )
 
     except HTTPException:
@@ -282,9 +286,13 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
                 missing_tier1=state_info.get("missing_tier1", []),
                 missing_tier2=state_info.get("missing_tier2", []),
                 conflicts_detected=state_info.get("conflicts_detected", []),
-                score=state_info.get("score", current_state.get("completeness_score", 100)),
+                score=state_info.get(
+                    "score", current_state.get("completeness_score", 100)
+                ),
             ),
-            data=ClarificationDataV2(**data_info) if data_info else ClarificationDataV2(),
+            data=ClarificationDataV2(**data_info)
+            if data_info
+            else ClarificationDataV2(),
         )
 
     # V2: Merge responses into cumulative data object (server-side merging)
@@ -361,7 +369,9 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
                     conflicts_detected=state_info.get("conflicts_detected", []),
                     score=state_info.get("score", 100),
                 ),
-                data=ClarificationDataV2(**data_info) if data_info else ClarificationDataV2(),
+                data=ClarificationDataV2(**data_info)
+                if data_info
+                else ClarificationDataV2(),
             )
 
         if not questions_data:
@@ -415,7 +425,9 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
                 conflicts_detected=state_info.get("conflicts_detected", []),
                 score=state_info.get("score", 0),
             ),
-            data=ClarificationDataV2(**data_info) if data_info else ClarificationDataV2(),
+            data=ClarificationDataV2(**data_info)
+            if data_info
+            else ClarificationDataV2(),
         )
 
     except HTTPException:
