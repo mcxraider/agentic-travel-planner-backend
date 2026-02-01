@@ -11,13 +11,12 @@ from typing import Dict, Any
 
 from agents.clarification.schemas import ClarificationState
 from agents.clarification.prompts.builders import (
-    build_system_prompt,
-    build_user_prompt,
+    build_system_prompt_v2,
+    build_user_prompt_v2,
 )
 from agents.clarification.response_parser import (
-    parse_clarification_response,
-    build_state_update_for_questions,
-    build_state_update_for_completion,
+    parse_clarification_response_v2,
+    build_state_update_for_v2_response,
     ParseError,
 )
 from agents.shared.llm.client import get_cached_client, get_llm_response_with_usage
@@ -52,9 +51,9 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
     try:
         client = get_cached_client()
 
-        # Build prompts
-        system_prompt = build_system_prompt(state)
-        user_prompt = build_user_prompt(state)
+        # Build v2 prompts
+        system_prompt = build_system_prompt_v2(state)
+        user_prompt = build_user_prompt_v2(state)
 
         # Get debug logger from registry if session_id is available
         session_id = state.get("session_id")
@@ -62,21 +61,21 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
 
         # Log the call
         logger.info(
-            f"Round {state['current_round']} - Calling LLM",
+            f"Round {state['current_round']} - Calling LLM (v2)",
             extra={
                 "round": state["current_round"],
-                "collected_data_keys": list(state.get("collected_data", {}).keys()),
+                "data_keys": list(k for k, v in state.get("data", {}).items() if v is not None),
                 "completeness_score": state.get("completeness_score", 0),
             },
         )
 
         # Debug output (for development)
         print("\n" + "=" * 80)
-        print(f"🤖 Round {state['current_round']} - Calling LLM")
+        print(f"🤖 Round {state['current_round']} - Calling LLM (v2)")
         print("=" * 80)
         print(f"\n📋 USER PROMPT:\n{user_prompt}")
         print(f"\n📊 State Debug:")
-        print(f"   - collected_data: {state.get('collected_data', {})}")
+        print(f"   - data: {state.get('data', {})}")
         print(f"   - current_round: {state['current_round']}")
         print(f"   - completeness_score: {state.get('completeness_score', 0)}")
         print("=" * 80)
@@ -105,18 +104,16 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         print(f"\n📈 Token Usage: {usage['input_tokens']} in / {usage['output_tokens']} out")
         print(f"⏱️  LLM Duration: {duration_ms:.2f}ms")
 
-        # Parse response
-        is_complete, parsed_data = parse_clarification_response(llm_response)
+        # Parse v2 response (unified format for both in-progress and complete)
+        parsed_response = parse_clarification_response_v2(llm_response)
 
-        # Build state update based on response type
-        if is_complete:
-            result = build_state_update_for_completion(parsed_data)
-        else:
-            result = build_state_update_for_questions(state, parsed_data)
+        # Build state update using v2 handler
+        result = build_state_update_for_v2_response(state, parsed_response)
 
         # Log completion
         print(
             f"✅ Round {state['current_round']} completed - "
+            f"Status: {parsed_response['status']} - "
             f"Score: {result.get('completeness_score', 0)}/100"
         )
 

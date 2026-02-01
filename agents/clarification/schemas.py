@@ -5,7 +5,7 @@ Defines the state schema for LangGraph, Pydantic models for structured
 questions and responses, and API request/response models.
 """
 
-from typing import TypedDict, List, Optional, Annotated, Dict, Any
+from typing import TypedDict, List, Optional, Annotated, Dict, Any, Literal
 from pydantic import BaseModel, Field
 import operator
 
@@ -54,6 +54,9 @@ class ClarificationState(TypedDict):
     # Accumulated answers (built up over rounds)
     collected_data: dict
 
+    # V2: Cumulative data object returned every round
+    data: Optional[dict]
+
     # Messages for tracking conversation history
     messages: Annotated[List[dict], operator.add]
 
@@ -67,7 +70,7 @@ class ClarificationState(TypedDict):
 
 
 class Question(BaseModel):
-    """A single clarification question."""
+    """A single clarification question (v1)."""
 
     question_id: int = Field(description="Unique identifier for the question")
     field: str = Field(description="The data field this question populates")
@@ -82,7 +85,7 @@ class Question(BaseModel):
 
 
 class QuestionsState(BaseModel):
-    """State information returned with questions."""
+    """State information returned with questions (v1)."""
 
     answered_fields: List[str] = Field(
         default_factory=list, description="Fields already answered"
@@ -97,7 +100,7 @@ class QuestionsState(BaseModel):
 
 class QuestionsResponse(BaseModel):
     """
-    Structured response from LLM containing questions.
+    Structured response from LLM containing questions (v1).
 
     This model validates the JSON output from the LLM during
     clarification rounds.
@@ -111,7 +114,7 @@ class QuestionsResponse(BaseModel):
 
 class FinalClarificationData(BaseModel):
     """
-    Final collected data from clarification.
+    Final collected data from clarification (v1).
 
     This model represents the complete set of user preferences
     after clarification is finished.
@@ -130,6 +133,121 @@ class FinalClarificationData(BaseModel):
     special_logistics: Optional[str] = None
     wifi_need: Optional[str] = None
     schedule_preference: Optional[str] = None
+
+
+# =============================================================================
+# V2 Question Models (Pydantic)
+# =============================================================================
+
+
+class QuestionV2(BaseModel):
+    """A single clarification question (v2)."""
+
+    id: str = Field(description="Unique identifier in q<round>_<num> format")
+    field: str = Field(description="The data field this question populates")
+    tier: int = Field(ge=1, le=4, description="Question tier (1-4)")
+    question: str = Field(description="The question text to display to user")
+    type: Literal["single_select", "multi_select", "ranked", "text"] = Field(
+        description="Question type"
+    )
+    options: List[str] = Field(default_factory=list, description="Available options")
+    min_selections: Optional[int] = Field(
+        default=None, description="Minimum selections for multi_select"
+    )
+    max_selections: Optional[int] = Field(
+        default=None, description="Maximum selections for multi_select"
+    )
+    allow_custom: bool = Field(
+        default=False, description="Whether custom text input is allowed"
+    )
+
+
+class QuestionsStateV2(BaseModel):
+    """State information returned with questions (v2)."""
+
+    collected: List[str] = Field(
+        default_factory=list, description="Fields already collected"
+    )
+    missing_tier1: List[str] = Field(
+        default_factory=list, description="Missing tier 1 fields"
+    )
+    missing_tier2: List[str] = Field(
+        default_factory=list, description="Missing tier 2 fields"
+    )
+    conflicts_detected: List[str] = Field(
+        default_factory=list, description="Detected conflicts between answers"
+    )
+    score: int = Field(default=0, ge=0, le=100, description="Current completeness score")
+
+
+class Top3MustDos(BaseModel):
+    """Ranked top 3 must-do activities."""
+
+    first: Optional[str] = Field(default=None, alias="1")
+    second: Optional[str] = Field(default=None, alias="2")
+    third: Optional[str] = Field(default=None, alias="3")
+
+    class Config:
+        populate_by_name = True
+
+
+class ClarificationDataV2(BaseModel):
+    """
+    Cumulative data object returned every round (v2).
+
+    All fields are Optional - returns null for uncollected fields.
+    """
+
+    # Tier 1: Critical
+    activity_preferences: Optional[List[str]] = None
+    pace_preference: Optional[str] = None
+    tourist_vs_local: Optional[str] = None
+    mobility_level: Optional[str] = None
+    dining_style: Optional[List[str]] = None
+
+    # Tier 2: Planning Essentials
+    top_3_must_dos: Optional[Dict[str, Optional[str]]] = None
+    transportation_mode: Optional[List[str]] = None
+    arrival_time: Optional[str] = None
+    departure_time: Optional[str] = None
+    budget_priority: Optional[str] = None
+    accommodation_style: Optional[str] = None
+
+    # Tier 3: Conditional Critical
+    wifi_need: Optional[str] = None
+    dietary_severity: Optional[str] = None
+    special_logistics: Optional[str] = None
+
+    # Tier 4: Optimization
+    accessibility_needs: Optional[str] = None
+    daily_rhythm: Optional[str] = None
+    downtime_preference: Optional[str] = None
+
+    # Meta fields
+    conflicts_resolved: Optional[List[str]] = Field(default=None, alias="_conflicts_resolved")
+    warnings: Optional[List[str]] = Field(default=None, alias="_warnings")
+
+    class Config:
+        populate_by_name = True
+
+
+class QuestionsResponseV2(BaseModel):
+    """
+    Structured response from LLM containing questions (v2).
+
+    This model validates the JSON output from the LLM during
+    clarification rounds.
+    """
+
+    status: Literal["in_progress", "complete"] = Field(
+        description="Status: 'in_progress' or 'complete'"
+    )
+    round: int = Field(ge=1, le=3, description="Current round number (1-3)")
+    questions: List[QuestionV2] = Field(
+        default_factory=list, description="Questions for this round (empty if complete)"
+    )
+    state: QuestionsStateV2 = Field(description="Current state information")
+    data: ClarificationDataV2 = Field(description="Cumulative data object")
 
 
 # =============================================================================
@@ -216,3 +334,31 @@ class SessionStatusResponse(BaseModel):
     current_round: Optional[int] = None
     completeness_score: Optional[int] = None
     clarification_complete: Optional[bool] = None
+
+
+# =============================================================================
+# V2 API Request/Response Models
+# =============================================================================
+
+
+class StartSessionResponseV2(BaseModel):
+    """Response after starting a clarification session (v2)."""
+
+    session_id: str = Field(description="Unique session identifier")
+    round: int = Field(description="Current round number")
+    questions: List[QuestionV2] = Field(description="Questions for this round")
+    state: QuestionsStateV2 = Field(description="Current state information")
+    data: ClarificationDataV2 = Field(description="Cumulative data object")
+
+
+class RespondResponseV2(BaseModel):
+    """Response after submitting answers (v2)."""
+
+    session_id: str = Field(description="Session identifier")
+    complete: bool = Field(description="Whether clarification is complete")
+    round: int = Field(description="Current round number")
+    questions: List[QuestionV2] = Field(
+        default_factory=list, description="Next questions (empty if complete)"
+    )
+    state: QuestionsStateV2 = Field(description="Current state information")
+    data: ClarificationDataV2 = Field(description="Cumulative data object")

@@ -21,9 +21,19 @@ from agents.clarification.schemas import (
     SessionStatusResponse,
     Question,
     QuestionsState,
+    # V2 models
+    StartSessionResponseV2,
+    RespondResponseV2,
+    QuestionV2,
+    QuestionsStateV2,
+    ClarificationDataV2,
 )
 from agents.clarification.graph.build import create_clarification_graph
 from agents.clarification.response_parser import merge_collected_data
+from agents.clarification.prompts.builders import (
+    get_initial_data_object,
+    merge_user_responses_into_data,
+)
 from agents.shared.logging.debug_logger import get_or_create_logger, remove_logger
 
 
@@ -77,16 +87,18 @@ def create_initial_state(request: StartSessionRequest, session_id: str) -> Clari
         "current_questions": None,
         "user_response": None,
         "collected_data": {},
+        # V2: Initialize data object with all fields as null
+        "data": get_initial_data_object(),
         "messages": [],
         # Debug/tracking
         "session_id": session_id,
     }
 
 
-@router.post("/start", response_model=StartSessionResponse)
-async def start_session(request: StartSessionRequest) -> StartSessionResponse:
+@router.post("/start", response_model=StartSessionResponseV2)
+async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
     """
-    Start a new clarification session.
+    Start a new clarification session (v2).
 
     Creates a new session with the provided user and trip information,
     then runs the first clarification round to generate initial questions.
@@ -95,7 +107,7 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
         request: Session start request with user/trip details
 
     Returns:
-        Session ID and first round of questions
+        Session ID, first round of questions, state, and data object
     """
     # Start API timing
     api_start_time = time.perf_counter()
@@ -138,7 +150,7 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
             "created_at": datetime.utcnow().isoformat(),
         }
 
-        # Extract questions from result
+        # Extract questions from result (v2 format)
         questions_data = result.get("current_questions", {})
 
         if not questions_data:
@@ -155,20 +167,24 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
                 detail="No questions generated in first round",
             )
 
-        # Build response
+        # Build v2 response
         questions = [
-            Question(
-                question_id=q["question_id"],
+            QuestionV2(
+                id=q["id"],
                 field=q["field"],
-                multi_select=q.get("multi_select", False),
-                question_text=q["question_text"],
-                options=q["options"],
-                allow_custom_input=q.get("allow_custom_input", False),
+                tier=q.get("tier", 1),
+                question=q["question"],
+                type=q.get("type", "single_select"),
+                options=q.get("options", []),
+                min_selections=q.get("min_selections"),
+                max_selections=q.get("max_selections"),
+                allow_custom=q.get("allow_custom", False),
             )
             for q in questions_data.get("questions", [])
         ]
 
         state_info = questions_data.get("state", {})
+        data_info = questions_data.get("data", {})
 
         # Log successful API timing
         api_duration_ms = (time.perf_counter() - api_start_time) * 1000
@@ -180,15 +196,18 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
         )
 
         print(result)
-        return StartSessionResponse(
+        return StartSessionResponseV2(
             session_id=session_id,
             round=questions_data.get("round", 1),
             questions=questions,
-            state=QuestionsState(
-                answered_fields=state_info.get("answered_fields", []),
-                missing_fields=state_info.get("missing_fields", []),
-                completeness_score=state_info.get("completeness_score", 0),
+            state=QuestionsStateV2(
+                collected=state_info.get("collected", []),
+                missing_tier1=state_info.get("missing_tier1", []),
+                missing_tier2=state_info.get("missing_tier2", []),
+                conflicts_detected=state_info.get("conflicts_detected", []),
+                score=state_info.get("score", 0),
             ),
+            data=ClarificationDataV2(**data_info) if data_info else ClarificationDataV2(),
         )
 
     except HTTPException:
@@ -208,10 +227,10 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
         )
 
 
-@router.post("/respond", response_model=RespondResponse)
-async def respond_to_questions(request: RespondRequest) -> RespondResponse:
+@router.post("/respond", response_model=RespondResponseV2)
+async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
     """
-    Submit responses to clarification questions.
+    Submit responses to clarification questions (v2).
 
     Processes user responses and either returns the next round of questions
     or the final collected data if clarification is complete.
@@ -220,7 +239,7 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
         request: Response submission with session ID and answers
 
     Returns:
-        Next questions or final collected data
+        Next questions, state, and data object (or final data if complete)
     """
     # Start API timing
     api_start_time = time.perf_counter()
@@ -251,13 +270,28 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
             round_num=current_round,
             success=True,
         )
-        return RespondResponse(
+        data_info = current_state.get("data", {})
+        state_info = current_state.get("current_questions", {}).get("state", {})
+        return RespondResponseV2(
             session_id=session_id,
             complete=True,
-            collected_data=current_state.get("collected_data", {}),
+            round=current_round,
+            questions=[],
+            state=QuestionsStateV2(
+                collected=state_info.get("collected", []),
+                missing_tier1=state_info.get("missing_tier1", []),
+                missing_tier2=state_info.get("missing_tier2", []),
+                conflicts_detected=state_info.get("conflicts_detected", []),
+                score=state_info.get("score", current_state.get("completeness_score", 100)),
+            ),
+            data=ClarificationDataV2(**data_info) if data_info else ClarificationDataV2(),
         )
 
-    # Merge responses with collected data
+    # V2: Merge responses into cumulative data object (server-side merging)
+    current_data = current_state.get("data") or get_initial_data_object()
+    merged_data = merge_user_responses_into_data(current_data, request.responses)
+
+    # Also merge with collected_data for backwards compatibility
     new_collected_data = merge_collected_data(
         current_state.get("collected_data", {}),
         request.responses,
@@ -268,6 +302,7 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
     next_state = {
         "user_response": request.responses,
         "collected_data": new_collected_data,
+        "data": merged_data,  # V2: Pass merged data to LLM
         "current_round": next_round,
         "current_questions": None,
         "session_id": session_id,
@@ -296,6 +331,11 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
         # Update session state
         _sessions[session_id]["state"] = result
 
+        # Extract v2 questions data
+        questions_data = result.get("current_questions", {})
+        state_info = questions_data.get("state", {})
+        data_info = questions_data.get("data", result.get("data", {}))
+
         # Check if complete
         if result.get("clarification_complete", False):
             api_duration_ms = (time.perf_counter() - api_start_time) * 1000
@@ -309,14 +349,20 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
             debug_logger.log_session_summary(total_rounds=next_round)
             # Clean up logger from registry to free memory
             remove_logger(session_id)
-            return RespondResponse(
+            return RespondResponseV2(
                 session_id=session_id,
                 complete=True,
-                collected_data=result.get("collected_data", {}),
+                round=questions_data.get("round", next_round),
+                questions=[],
+                state=QuestionsStateV2(
+                    collected=state_info.get("collected", []),
+                    missing_tier1=state_info.get("missing_tier1", []),
+                    missing_tier2=state_info.get("missing_tier2", []),
+                    conflicts_detected=state_info.get("conflicts_detected", []),
+                    score=state_info.get("score", 100),
+                ),
+                data=ClarificationDataV2(**data_info) if data_info else ClarificationDataV2(),
             )
-
-        # Return next questions
-        questions_data = result.get("current_questions", {})
 
         if not questions_data:
             api_duration_ms = (time.perf_counter() - api_start_time) * 1000
@@ -332,19 +378,21 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
                 detail="No questions generated but clarification not complete",
             )
 
+        # Build v2 questions
         questions = [
-            Question(
-                question_id=q["question_id"],
+            QuestionV2(
+                id=q["id"],
                 field=q["field"],
-                multi_select=q.get("multi_select", False),
-                question_text=q["question_text"],
-                options=q["options"],
-                allow_custom_input=q.get("allow_custom_input", False),
+                tier=q.get("tier", 1),
+                question=q["question"],
+                type=q.get("type", "single_select"),
+                options=q.get("options", []),
+                min_selections=q.get("min_selections"),
+                max_selections=q.get("max_selections"),
+                allow_custom=q.get("allow_custom", False),
             )
             for q in questions_data.get("questions", [])
         ]
-
-        state_info = questions_data.get("state", {})
 
         # Log successful API timing
         api_duration_ms = (time.perf_counter() - api_start_time) * 1000
@@ -355,16 +403,19 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
             success=True,
         )
 
-        return RespondResponse(
+        return RespondResponseV2(
             session_id=session_id,
             complete=False,
-            round=questions_data.get("round"),
+            round=questions_data.get("round", next_round),
             questions=questions,
-            state=QuestionsState(
-                answered_fields=state_info.get("answered_fields", []),
-                missing_fields=state_info.get("missing_fields", []),
-                completeness_score=state_info.get("completeness_score", 0),
+            state=QuestionsStateV2(
+                collected=state_info.get("collected", []),
+                missing_tier1=state_info.get("missing_tier1", []),
+                missing_tier2=state_info.get("missing_tier2", []),
+                conflicts_detected=state_info.get("conflicts_detected", []),
+                score=state_info.get("score", 0),
             ),
+            data=ClarificationDataV2(**data_info) if data_info else ClarificationDataV2(),
         )
 
     except HTTPException:

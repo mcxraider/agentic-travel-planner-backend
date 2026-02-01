@@ -24,15 +24,15 @@ _logger_registry: Dict[str, "DebugLogger"] = {}
 def get_or_create_logger(session_id: str, logs_dir: str = "logs") -> "DebugLogger":
     """
     Get an existing logger for the session or create a new one.
-    
+
     This ensures the same DebugLogger instance is used across all
     API calls and graph nodes for a given session, allowing proper
     accumulation of token counts and costs.
-    
+
     Args:
         session_id: Unique session identifier
         logs_dir: Directory to store log files (default: "logs")
-        
+
     Returns:
         DebugLogger instance for this session
     """
@@ -44,11 +44,112 @@ def get_or_create_logger(session_id: str, logs_dir: str = "logs") -> "DebugLogge
 def remove_logger(session_id: str) -> None:
     """
     Remove a logger from the registry (e.g., after session ends).
-    
+
     Args:
         session_id: Session ID to remove
     """
     _logger_registry.pop(session_id, None)
+
+
+def extract_questions_from_log_file(log_file_path: str, output_path: Optional[str] = None) -> str:
+    """
+    Extract all questions from an existing log file and save to markdown.
+
+    This standalone function can be used to process existing log files
+    that were created before the folder-based structure was implemented.
+
+    Args:
+        log_file_path: Path to the JSON log file (JSON Lines format)
+        output_path: Optional output path for the markdown file.
+                     If not provided, saves alongside the log file.
+
+    Returns:
+        Path to the generated markdown file
+    """
+    log_path = Path(log_file_path)
+
+    if output_path:
+        questions_file = Path(output_path)
+    else:
+        questions_file = log_path.parent / f"{log_path.stem}_questions.md"
+
+    all_questions = []
+
+    # Read the log file and parse each line
+    with open(log_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            # Only process llm_call entries
+            if entry.get("type") != "llm_call":
+                continue
+
+            round_num = entry.get("round", 0)
+            session_id = entry.get("session_id", "unknown")
+            response_str = entry.get("response", "")
+
+            # Parse the response JSON to extract questions
+            try:
+                response_data = json.loads(response_str)
+            except json.JSONDecodeError:
+                continue
+
+            questions = response_data.get("questions", [])
+            if questions:
+                all_questions.append({
+                    "round": round_num,
+                    "session_id": session_id,
+                    "questions": questions
+                })
+
+    # Get session_id from first entry if available
+    session_id = all_questions[0]["session_id"] if all_questions else "unknown"
+
+    # Write to markdown file
+    with open(questions_file, "w", encoding="utf-8") as f:
+        f.write(f"# Questions Generated - Session {session_id}\n\n")
+        f.write(f"*Source: {log_path.name}*\n\n")
+        f.write(f"*Generated at: {datetime.now(timezone.utc).isoformat()}*\n\n")
+        f.write("---\n\n")
+
+        question_number = 1
+        for round_data in all_questions:
+            round_num = round_data["round"]
+            f.write(f"## Round {round_num}\n\n")
+
+            for q in round_data["questions"]:
+                q_id = q.get("id", "N/A")
+                field = q.get("field", "N/A")
+                tier = q.get("tier", "N/A")
+                question_text = q.get("question", "N/A")
+                q_type = q.get("type", "N/A")
+                options = q.get("options", [])
+
+                f.write(f"### {question_number}. {question_text}\n\n")
+                f.write(f"- **ID:** `{q_id}`\n")
+                f.write(f"- **Field:** `{field}`\n")
+                f.write(f"- **Tier:** {tier}\n")
+                f.write(f"- **Type:** {q_type}\n")
+
+                if options:
+                    f.write(f"- **Options:**\n")
+                    for opt in options:
+                        f.write(f"  - {opt}\n")
+
+                f.write("\n")
+                question_number += 1
+
+        f.write("---\n")
+        f.write(f"\n*Total questions: {question_number - 1}*\n")
+
+    return str(questions_file)
 
 
 def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
@@ -75,6 +176,7 @@ class DebugLogger:
 
     Tracks LLM calls, API timing, token usage, and costs.
     Log files are written in JSON Lines format (one JSON object per line).
+    Each session gets its own folder containing the log file and extracted questions.
     """
 
     def __init__(self, session_id: str, logs_dir: str = "logs"):
@@ -86,11 +188,13 @@ class DebugLogger:
             logs_dir: Directory to store log files (default: "logs")
         """
         self.session_id = session_id
-        self.logs_dir = Path(logs_dir)
-        self.log_file = self.logs_dir / f"{session_id}_logs.json"
+        self.base_logs_dir = Path(logs_dir)
+        # Create a session-specific folder
+        self.session_dir = self.base_logs_dir / session_id
+        self.log_file = self.session_dir / "session_logs.json"
 
-        # Ensure logs directory exists
-        self.logs_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure session directory exists
+        self.session_dir.mkdir(parents=True, exist_ok=True)
 
         # Session accumulators for summary
         self._total_input_tokens = 0
@@ -245,3 +349,89 @@ class DebugLogger:
             "total_api_duration_ms": round(self._total_api_duration_ms, 2),
             "llm_call_count": self._llm_call_count,
         }
+
+    def extract_questions_to_markdown(self) -> str:
+        """
+        Extract all questions from LLM call responses and save to a markdown file.
+
+        Parses the session log file, extracts questions from each llm_call entry's
+        response field, and writes them to a numbered markdown file.
+
+        Returns:
+            Path to the generated markdown file
+        """
+        questions_file = self.session_dir / "questions.md"
+        all_questions = []
+
+        # Read the log file and parse each line
+        if not self.log_file.exists():
+            return str(questions_file)
+
+        with open(self.log_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                # Only process llm_call entries
+                if entry.get("type") != "llm_call":
+                    continue
+
+                round_num = entry.get("round", 0)
+                response_str = entry.get("response", "")
+
+                # Parse the response JSON to extract questions
+                try:
+                    response_data = json.loads(response_str)
+                except json.JSONDecodeError:
+                    continue
+
+                questions = response_data.get("questions", [])
+                if questions:
+                    all_questions.append({
+                        "round": round_num,
+                        "questions": questions
+                    })
+
+        # Write to markdown file
+        with open(questions_file, "w", encoding="utf-8") as f:
+            f.write(f"# Questions Generated - Session {self.session_id}\n\n")
+            f.write(f"*Generated at: {self._get_timestamp()}*\n\n")
+            f.write("---\n\n")
+
+            question_number = 1
+            for round_data in all_questions:
+                round_num = round_data["round"]
+                f.write(f"## Round {round_num}\n\n")
+
+                for q in round_data["questions"]:
+                    q_id = q.get("id", "N/A")
+                    field = q.get("field", "N/A")
+                    tier = q.get("tier", "N/A")
+                    question_text = q.get("question", "N/A")
+                    q_type = q.get("type", "N/A")
+                    options = q.get("options", [])
+
+                    f.write(f"### {question_number}. {question_text}\n\n")
+                    f.write(f"- **ID:** `{q_id}`\n")
+                    f.write(f"- **Field:** `{field}`\n")
+                    f.write(f"- **Tier:** {tier}\n")
+                    f.write(f"- **Type:** {q_type}\n")
+
+                    if options:
+                        f.write(f"- **Options:**\n")
+                        for opt in options:
+                            f.write(f"  - {opt}\n")
+
+                    f.write("\n")
+                    question_number += 1
+
+            f.write("---\n")
+            f.write(f"\n*Total questions: {question_number - 1}*\n")
+
+        return str(questions_file)
