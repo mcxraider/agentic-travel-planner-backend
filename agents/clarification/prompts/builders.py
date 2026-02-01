@@ -77,7 +77,9 @@ def build_collected_data_text(state: "ClarificationState") -> str:
     """
     collected_data = state.get("collected_data", {})
     if collected_data:
-        return f"\n\nInformation collected so far:\n{json.dumps(collected_data, indent=2)}"
+        return (
+            f"\n\nInformation collected so far:\n{json.dumps(collected_data, indent=2)}"
+        )
     return ""
 
 
@@ -223,7 +225,9 @@ def build_user_prompt_v2(state: "ClarificationState") -> str:
         )
 
     # Round instruction
-    parts.append(f"\nThis is Round {current_round}. Generate questions or complete clarification.")
+    parts.append(
+        f"\nThis is Round {current_round}. Generate questions or complete clarification."
+    )
 
     return "\n".join(parts)
 

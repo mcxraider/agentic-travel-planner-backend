@@ -1,6 +1,10 @@
 """Logging configuration and utilities."""
 
-from agents.shared.logging.config import setup_logging, log_state_transition, StructuredFormatter
+from agents.shared.logging.config import (
+    setup_logging,
+    log_state_transition,
+    StructuredFormatter,
+)
 from agents.shared.logging.debug_logger import (
     DebugLogger,
     get_or_create_logger,

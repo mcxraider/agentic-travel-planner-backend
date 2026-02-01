@@ -177,7 +177,9 @@ class QuestionsStateV2(BaseModel):
     conflicts_detected: List[str] = Field(
         default_factory=list, description="Detected conflicts between answers"
     )
-    score: int = Field(default=0, ge=0, le=100, description="Current completeness score")
+    score: int = Field(
+        default=0, ge=0, le=100, description="Current completeness score"
+    )
 
 
 class Top3MustDos(BaseModel):
@@ -224,7 +226,9 @@ class ClarificationDataV2(BaseModel):
     downtime_preference: Optional[str] = None
 
     # Meta fields
-    conflicts_resolved: Optional[List[str]] = Field(default=None, alias="_conflicts_resolved")
+    conflicts_resolved: Optional[List[str]] = Field(
+        default=None, alias="_conflicts_resolved"
+    )
     warnings: Optional[List[str]] = Field(default=None, alias="_warnings")
 
     class Config:

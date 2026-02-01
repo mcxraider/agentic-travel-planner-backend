@@ -64,7 +64,9 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
             f"Round {state['current_round']} - Calling LLM (v2)",
             extra={
                 "round": state["current_round"],
-                "data_keys": list(k for k, v in state.get("data", {}).items() if v is not None),
+                "data_keys": list(
+                    k for k, v in state.get("data", {}).items() if v is not None
+                ),
                 "completeness_score": state.get("completeness_score", 0),
             },
         )
@@ -101,7 +103,9 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
             )
 
         # Print token usage to console
-        print(f"\n📈 Token Usage: {usage['input_tokens']} in / {usage['output_tokens']} out")
+        print(
+            f"\n📈 Token Usage: {usage['input_tokens']} in / {usage['output_tokens']} out"
+        )
         print(f"⏱️  LLM Duration: {duration_ms:.2f}ms")
 
         # Parse v2 response (unified format for both in-progress and complete)

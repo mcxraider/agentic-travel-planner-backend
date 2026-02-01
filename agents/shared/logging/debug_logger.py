@@ -51,7 +51,9 @@ def remove_logger(session_id: str) -> None:
     _logger_registry.pop(session_id, None)
 
 
-def extract_questions_from_log_file(log_file_path: str, output_path: Optional[str] = None) -> str:
+def extract_questions_from_log_file(
+    log_file_path: str, output_path: Optional[str] = None
+) -> str:
     """
     Extract all questions from an existing log file and save to markdown.
 
@@ -103,11 +105,13 @@ def extract_questions_from_log_file(log_file_path: str, output_path: Optional[st
 
             questions = response_data.get("questions", [])
             if questions:
-                all_questions.append({
-                    "round": round_num,
-                    "session_id": session_id,
-                    "questions": questions
-                })
+                all_questions.append(
+                    {
+                        "round": round_num,
+                        "session_id": session_id,
+                        "questions": questions,
+                    }
+                )
 
     # Get session_id from first entry if available
     session_id = all_questions[0]["session_id"] if all_questions else "unknown"
@@ -393,10 +397,7 @@ class DebugLogger:
 
                 questions = response_data.get("questions", [])
                 if questions:
-                    all_questions.append({
-                        "round": round_num,
-                        "questions": questions
-                    })
+                    all_questions.append({"round": round_num, "questions": questions})
 
         # Write to markdown file
         with open(questions_file, "w", encoding="utf-8") as f:

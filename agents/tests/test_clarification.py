@@ -163,7 +163,9 @@ def simulate_user_responses(questions_data: Dict[str, Any]) -> Dict[str, Any]:
             if q["multi_select"]:
                 responses[q["field"]] = selected_options
             else:
-                responses[q["field"]] = selected_options[0] if selected_options else None
+                responses[q["field"]] = (
+                    selected_options[0] if selected_options else None
+                )
         else:
             # Custom text input
             responses[q["field"]] = user_input
@@ -320,7 +322,9 @@ def run_automated_test(
         currency=currency,
     )
 
-    config = {"configurable": {"thread_id": f"automated_test_{datetime.now().timestamp()}"}}
+    config = {
+        "configurable": {"thread_id": f"automated_test_{datetime.now().timestamp()}"}
+    }
 
     print("\n🤖 Running automated clarification test\n")
 
