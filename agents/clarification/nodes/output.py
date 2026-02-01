@@ -9,7 +9,7 @@ import logging
 from typing import Dict, Any
 
 from agents.clarification.schemas import ClarificationState
-from agents.shared.contracts.clarification_output import ClarificationOutput
+from agents.shared.contracts.clarification_output import ClarificationOutput, ClarificationOutputV2
 
 
 logger = logging.getLogger("agents.clarification")
@@ -21,7 +21,7 @@ def output_node(state: ClarificationState) -> Dict[str, Any]:
 
     This node is executed when clarification is complete. It:
     1. Logs a summary of the completed clarification
-    2. Validates the output against the contract schema
+    2. Validates the output against the v2 contract schema
     3. Returns the final state (unchanged)
 
     Args:
@@ -30,57 +30,46 @@ def output_node(state: ClarificationState) -> Dict[str, Any]:
     Returns:
         Empty dict (no state changes needed at this point)
     """
+    # V2: Use data object if available, fall back to collected_data
+    data = state.get("data") or state.get("collected_data", {})
+
     # Log completion summary
     print("\n" + "=" * 80)
-    print("CLARIFICATION COMPLETE!")
+    print("CLARIFICATION COMPLETE (V2)!")
     print("=" * 80)
     print(f"\nCompleteness Score: {state['completeness_score']}/100")
     print(f"Rounds Completed: {state['current_round']}")
-    print("\nCollected Data:")
-    print(json.dumps(state["collected_data"], indent=2))
+    print("\nCollected Data (V2):")
+    print(json.dumps(data, indent=2))
     print("=" * 80 + "\n")
 
     # Log structured event
+    collected_fields = [k for k, v in data.items() if v is not None and not k.startswith("_")]
     logger.info(
-        "Clarification complete",
+        "Clarification complete (v2)",
         extra={
-            "event": "clarification_complete",
+            "event": "clarification_complete_v2",
             "completeness_score": state["completeness_score"],
             "rounds_completed": state["current_round"],
-            "collected_fields": list(state["collected_data"].keys()),
+            "collected_fields": collected_fields,
         },
     )
 
-    # Validate against output contract (optional - for downstream agents)
+    # Validate against v2 output contract (for downstream agents)
     try:
-        collected = state["collected_data"]
-        output = ClarificationOutput(
-            activity_preferences=collected.get("activity_preferences", []),
-            primary_activity_focus=collected.get("primary_activity_focus"),
-            destination_specific_interests=collected.get(
-                "destination_specific_interests", []
-            ),
-            pace_preference=collected.get("pace_preference"),
-            tourist_vs_local_preference=collected.get("tourist_vs_local_preference"),
-            schedule_preference=collected.get("schedule_preference"),
-            mobility_walking_capacity=collected.get("mobility_walking_capacity"),
-            dining_style=collected.get("dining_style", []),
-            transportation_preference=collected.get("transportation_preference", []),
-            arrival_time=collected.get("arrival_time"),
-            departure_time=collected.get("departure_time"),
-            special_logistics=collected.get("special_logistics"),
-            wifi_need=collected.get("wifi_need"),
+        output = ClarificationOutputV2.from_data(
+            data=data,
             completeness_score=state["completeness_score"],
             rounds_completed=state["current_round"],
         )
         logger.info(
-            "Output contract validation successful",
+            "V2 output contract validation successful",
             extra={"validated_output": output.model_dump()},
         )
     except Exception as e:
         logger.warning(
-            f"Output contract validation failed: {e}",
-            extra={"collected_data": state["collected_data"]},
+            f"V2 output contract validation failed: {e}",
+            extra={"data": data},
         )
 
     # Return empty dict - no state changes needed
