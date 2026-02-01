@@ -33,8 +33,10 @@ from agents.clarification.response_parser import merge_collected_data
 from agents.clarification.prompts.builders import (
     get_initial_data_object,
     merge_user_responses_into_data,
+    build_system_prompt_v2,
 )
 from agents.shared.logging.debug_logger import get_or_create_logger, remove_logger
+from agents.shared.cache import save_system_prompt, delete_session_cache
 
 
 # Create router for clarification route
@@ -122,6 +124,10 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
 
     # Create initial state with session_id
     initial_state = create_initial_state(request, session_id)
+
+    # Build and cache system prompt for this session (enables OpenAI prompt caching)
+    system_prompt = build_system_prompt_v2(initial_state)
+    save_system_prompt(session_id, system_prompt)
 
     # Get graph and run first round
     graph = get_graph()
@@ -356,7 +362,9 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
             # Log session summary when clarification completes
             debug_logger.log_session_summary(total_rounds=next_round)
             # Clean up logger from registry to free memory
-            remove_logger(session_id)
+            # remove_logger(session_id)
+            # Clean up cached system prompt for this session
+            # delete_session_cache(session_id)
             return RespondResponseV2(
                 session_id=session_id,
                 complete=True,
