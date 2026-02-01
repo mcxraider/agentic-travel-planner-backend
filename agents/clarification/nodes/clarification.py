@@ -21,6 +21,7 @@ from agents.clarification.response_parser import (
 )
 from agents.shared.llm.client import get_cached_client, get_llm_response_with_usage
 from agents.shared.logging.debug_logger import get_or_create_logger
+from agents.shared.cache import load_system_prompt
 
 
 logger = logging.getLogger("agents.clarification")
@@ -51,12 +52,21 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
     try:
         client = get_cached_client()
 
-        # Build v2 prompts
-        system_prompt = build_system_prompt_v2(state)
+        # Load cached system prompt (built once at session start for OpenAI caching)
+        session_id = state.get("session_id")
+        system_prompt = load_system_prompt(session_id) if session_id else None
+
+        # Fallback: rebuild if cache miss (defensive)
+        if system_prompt is None:
+            system_prompt = build_system_prompt_v2(state)
+            logger.warning(
+                f"Cache miss for session {session_id}, rebuilt system prompt"
+            )
+
+        # Build user prompt (changes each round with new data)
         user_prompt = build_user_prompt_v2(state)
 
         # Get debug logger from registry if session_id is available
-        session_id = state.get("session_id")
         debug_logger = get_or_create_logger(session_id) if session_id else None
 
         # Log the call
@@ -74,12 +84,6 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         # Debug output (for development)
         print("\n" + "=" * 80)
         print(f"🤖 Round {state['current_round']} - Calling LLM (v2)")
-        print("=" * 80)
-        print(f"\n📋 USER PROMPT:\n{user_prompt}")
-        print(f"\n📊 State Debug:")
-        print(f"   - data: {state.get('data', {})}")
-        print(f"   - current_round: {state['current_round']}")
-        print(f"   - completeness_score: {state.get('completeness_score', 0)}")
         print("=" * 80)
 
         # Call LLM with timing

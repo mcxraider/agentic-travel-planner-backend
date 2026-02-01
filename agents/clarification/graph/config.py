@@ -6,7 +6,7 @@ making it easy to tune behavior without modifying the graph wiring.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
 
 
 @dataclass
@@ -48,40 +48,3 @@ class GraphConfig:
 
 # Default configuration instance
 DEFAULT_CONFIG = GraphConfig()
-
-
-def get_config(
-    recursion_limit: Optional[int] = None,
-    interrupt_after: Optional[List[str]] = None,
-    max_rounds: Optional[int] = None,
-    min_completeness_score: Optional[int] = None,
-    enable_checkpointing: Optional[bool] = None,
-    model: Optional[str] = None,
-) -> GraphConfig:
-    """
-    Create a configuration with optional overrides.
-
-    Args:
-        recursion_limit: Override for recursion limit
-        interrupt_after: Override for interrupt nodes
-        max_rounds: Override for max clarification rounds
-        min_completeness_score: Override for min completeness score
-        enable_checkpointing: Override for checkpointing flag
-        model: Override for LLM model
-
-    Returns:
-        GraphConfig with specified overrides applied
-    """
-    return GraphConfig(
-        recursion_limit=recursion_limit or DEFAULT_CONFIG.recursion_limit,
-        interrupt_after=interrupt_after
-        if interrupt_after is not None
-        else DEFAULT_CONFIG.interrupt_after,
-        max_rounds=max_rounds or DEFAULT_CONFIG.max_rounds,
-        min_completeness_score=min_completeness_score
-        or DEFAULT_CONFIG.min_completeness_score,
-        enable_checkpointing=enable_checkpointing
-        if enable_checkpointing is not None
-        else DEFAULT_CONFIG.enable_checkpointing,
-        model=model or DEFAULT_CONFIG.model,
-    )

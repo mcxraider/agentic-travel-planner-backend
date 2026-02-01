@@ -69,77 +69,6 @@ class ClarificationState(TypedDict):
 # =============================================================================
 
 
-class Question(BaseModel):
-    """A single clarification question (v1)."""
-
-    question_id: int = Field(description="Unique identifier for the question")
-    field: str = Field(description="The data field this question populates")
-    multi_select: bool = Field(
-        default=False, description="Whether multiple options can be selected"
-    )
-    question_text: str = Field(description="The question text to display to user")
-    options: List[str] = Field(description="Available answer options")
-    allow_custom_input: bool = Field(
-        default=False, description="Whether custom text input is allowed"
-    )
-
-
-class QuestionsState(BaseModel):
-    """State information returned with questions (v1)."""
-
-    answered_fields: List[str] = Field(
-        default_factory=list, description="Fields already answered"
-    )
-    missing_fields: List[str] = Field(
-        default_factory=list, description="Fields still needing answers"
-    )
-    completeness_score: int = Field(
-        default=0, ge=0, le=100, description="Current completeness score"
-    )
-
-
-class QuestionsResponse(BaseModel):
-    """
-    Structured response from LLM containing questions (v1).
-
-    This model validates the JSON output from the LLM during
-    clarification rounds.
-    """
-
-    status: str = Field(description="Status: 'in_progress' or 'complete'")
-    round: int = Field(ge=1, le=3, description="Current round number (1-3)")
-    questions: List[Question] = Field(description="List of questions for this round")
-    state: QuestionsState = Field(description="Current state information")
-
-
-class FinalClarificationData(BaseModel):
-    """
-    Final collected data from clarification (v1).
-
-    This model represents the complete set of user preferences
-    after clarification is finished.
-    """
-
-    activity_preferences: List[str] = Field(default_factory=list)
-    pace_preference: Optional[str] = None
-    tourist_vs_local_preference: Optional[str] = None
-    mobility_walking_capacity: Optional[str] = None
-    dining_style: List[str] = Field(default_factory=list)
-    primary_activity_focus: Optional[str] = None
-    destination_specific_interests: List[str] = Field(default_factory=list)
-    transportation_preference: List[str] = Field(default_factory=list)
-    arrival_time: Optional[str] = None
-    departure_time: Optional[str] = None
-    special_logistics: Optional[str] = None
-    wifi_need: Optional[str] = None
-    schedule_preference: Optional[str] = None
-
-
-# =============================================================================
-# V2 Question Models (Pydantic)
-# =============================================================================
-
-
 class QuestionV2(BaseModel):
     """A single clarification question (v2)."""
 
@@ -180,17 +109,6 @@ class QuestionsStateV2(BaseModel):
     score: int = Field(
         default=0, ge=0, le=100, description="Current completeness score"
     )
-
-
-class Top3MustDos(BaseModel):
-    """Ranked top 3 must-do activities."""
-
-    first: Optional[str] = Field(default=None, alias="1")
-    second: Optional[str] = Field(default=None, alias="2")
-    third: Optional[str] = Field(default=None, alias="3")
-
-    class Config:
-        populate_by_name = True
 
 
 class ClarificationDataV2(BaseModel):
@@ -293,40 +211,12 @@ class StartSessionRequest(BaseModel):
     )
 
 
-class StartSessionResponse(BaseModel):
-    """Response after starting a clarification session."""
-
-    session_id: str = Field(description="Unique session identifier")
-    round: int = Field(description="Current round number")
-    questions: List[Question] = Field(description="Questions for this round")
-    state: QuestionsState = Field(description="Current state information")
-
-
 class RespondRequest(BaseModel):
     """Request to submit responses to questions."""
 
     session_id: str = Field(description="Session identifier")
     responses: Dict[str, Any] = Field(
         description="Map of field names to user responses"
-    )
-
-
-class RespondResponse(BaseModel):
-    """Response after submitting answers."""
-
-    session_id: str = Field(description="Session identifier")
-    complete: bool = Field(description="Whether clarification is complete")
-    round: Optional[int] = Field(
-        default=None, description="Current round (if not complete)"
-    )
-    questions: Optional[List[Question]] = Field(
-        default=None, description="Next questions (if not complete)"
-    )
-    state: Optional[QuestionsState] = Field(
-        default=None, description="Current state (if not complete)"
-    )
-    collected_data: Optional[Dict[str, Any]] = Field(
-        default=None, description="Final collected data (if complete)"
     )
 
 
