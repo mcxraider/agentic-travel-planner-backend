@@ -72,34 +72,3 @@ def create_clarification_graph(
     app = graph.compile(**compile_kwargs)
 
     return app
-
-
-def create_graph_without_interrupts(
-    config: Optional[GraphConfig] = None,
-):
-    """
-    Create a graph that runs to completion without interrupts.
-
-    Useful for testing or batch processing where human-in-the-loop
-    is not needed.
-
-    Args:
-        config: Optional base configuration to modify.
-
-    Returns:
-        Compiled LangGraph application without interrupts.
-    """
-    if config is None:
-        config = GraphConfig(interrupt_after=[], enable_checkpointing=False)
-    else:
-        # Override interrupt settings
-        config = GraphConfig(
-            recursion_limit=config.recursion_limit,
-            interrupt_after=[],
-            max_rounds=config.max_rounds,
-            min_completeness_score=config.min_completeness_score,
-            enable_checkpointing=False,
-            model=config.model,
-        )
-
-    return create_clarification_graph(config)

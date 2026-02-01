@@ -9,10 +9,7 @@ import logging
 from typing import Dict, Any
 
 from agents.clarification.schemas import ClarificationState
-from agents.shared.contracts.clarification_output import (
-    ClarificationOutput,
-    ClarificationOutputV2,
-)
+from agents.shared.contracts.clarification_output import ClarificationOutputV2
 
 
 logger = logging.getLogger("agents.clarification")

@@ -59,7 +59,9 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         # Fallback: rebuild if cache miss (defensive)
         if system_prompt is None:
             system_prompt = build_system_prompt_v2(state)
-            logger.warning(f"Cache miss for session {session_id}, rebuilt system prompt")
+            logger.warning(
+                f"Cache miss for session {session_id}, rebuilt system prompt"
+            )
 
         # Build user prompt (changes each round with new data)
         user_prompt = build_user_prompt_v2(state)
@@ -83,7 +85,6 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         print("\n" + "=" * 80)
         print(f"🤖 Round {state['current_round']} - Calling LLM (v2)")
         print("=" * 80)
-
 
         # Call LLM with timing
         start_time = time.perf_counter()

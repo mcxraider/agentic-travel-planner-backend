@@ -5,7 +5,6 @@ Writes per-session JSON log files to the logs/ directory.
 """
 
 import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -49,111 +48,6 @@ def remove_logger(session_id: str) -> None:
         session_id: Session ID to remove
     """
     _logger_registry.pop(session_id, None)
-
-
-def extract_questions_from_log_file(
-    log_file_path: str, output_path: Optional[str] = None
-) -> str:
-    """
-    Extract all questions from an existing log file and save to markdown.
-
-    This standalone function can be used to process existing log files
-    that were created before the folder-based structure was implemented.
-
-    Args:
-        log_file_path: Path to the JSON log file (JSON Lines format)
-        output_path: Optional output path for the markdown file.
-                     If not provided, saves alongside the log file.
-
-    Returns:
-        Path to the generated markdown file
-    """
-    log_path = Path(log_file_path)
-
-    if output_path:
-        questions_file = Path(output_path)
-    else:
-        questions_file = log_path.parent / f"{log_path.stem}_questions.md"
-
-    all_questions = []
-
-    # Read the log file and parse each line
-    with open(log_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-
-            # Only process llm_call entries
-            if entry.get("type") != "llm_call":
-                continue
-
-            round_num = entry.get("round", 0)
-            session_id = entry.get("session_id", "unknown")
-            response_str = entry.get("response", "")
-
-            # Parse the response JSON to extract questions
-            try:
-                response_data = json.loads(response_str)
-            except json.JSONDecodeError:
-                continue
-
-            questions = response_data.get("questions", [])
-            if questions:
-                all_questions.append(
-                    {
-                        "round": round_num,
-                        "session_id": session_id,
-                        "questions": questions,
-                    }
-                )
-
-    # Get session_id from first entry if available
-    session_id = all_questions[0]["session_id"] if all_questions else "unknown"
-
-    # Write to markdown file
-    with open(questions_file, "w", encoding="utf-8") as f:
-        f.write(f"# Questions Generated - Session {session_id}\n\n")
-        f.write(f"*Source: {log_path.name}*\n\n")
-        f.write(f"*Generated at: {datetime.now(timezone.utc).isoformat()}*\n\n")
-        f.write("---\n\n")
-
-        question_number = 1
-        for round_data in all_questions:
-            round_num = round_data["round"]
-            f.write(f"## Round {round_num}\n\n")
-
-            for q in round_data["questions"]:
-                q_id = q.get("id", "N/A")
-                field = q.get("field", "N/A")
-                tier = q.get("tier", "N/A")
-                question_text = q.get("question", "N/A")
-                q_type = q.get("type", "N/A")
-                options = q.get("options", [])
-
-                f.write(f"### {question_number}. {question_text}\n\n")
-                f.write(f"- **ID:** `{q_id}`\n")
-                f.write(f"- **Field:** `{field}`\n")
-                f.write(f"- **Tier:** {tier}\n")
-                f.write(f"- **Type:** {q_type}\n")
-
-                if options:
-                    f.write(f"- **Options:**\n")
-                    for opt in options:
-                        f.write(f"  - {opt}\n")
-
-                f.write("\n")
-                question_number += 1
-
-        f.write("---\n")
-        f.write(f"\n*Total questions: {question_number - 1}*\n")
-
-    return str(questions_file)
 
 
 def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:

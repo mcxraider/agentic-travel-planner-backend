@@ -15,12 +15,8 @@ from fastapi import APIRouter, HTTPException, status
 from agents.clarification.schemas import (
     ClarificationState,
     StartSessionRequest,
-    StartSessionResponse,
     RespondRequest,
-    RespondResponse,
     SessionStatusResponse,
-    Question,
-    QuestionsState,
     # V2 models
     StartSessionResponseV2,
     RespondResponseV2,
@@ -35,8 +31,8 @@ from agents.clarification.prompts.builders import (
     merge_user_responses_into_data,
     build_system_prompt_v2,
 )
-from agents.shared.logging.debug_logger import get_or_create_logger, remove_logger
-from agents.shared.cache import save_system_prompt, delete_session_cache
+from agents.shared.logging.debug_logger import get_or_create_logger
+from agents.shared.cache import save_system_prompt
 
 
 # Create router for clarification route

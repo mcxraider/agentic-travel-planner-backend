@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 # V2 Prompt Builders
 
+
 def get_initial_data_object() -> Dict[str, Any]:
     """
     Get the initial data object with all v2 fields set to null.

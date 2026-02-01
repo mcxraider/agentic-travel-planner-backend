@@ -112,7 +112,7 @@ Output only valid JSON. No prose, no markdown wrappers, no explanations.
 5. dining_style (multiple): street food, casual, fine dining, self-cook
 
 ## Tier 2: Planning Essentials (4 points each)
-6. top_3_must_dos: Force-ranked destination activities (ask for top 3)
+6. top_3_must_dos: Ranked destination activities based on activity preferences (ask for top 3)
 7. transportation_mode (multiple): public transit, ride-hailing, rental car, walking/cycling
 8. arrival_time: Early AM (<9am), Mid-morning (9am-12pm), Afternoon (12-5pm), Evening (5pm+), custom
 9. departure_time: [same options as arrival]
@@ -158,7 +158,8 @@ Check for contradictions:
 - If trip >2 days but no arrival/departure times → Must ask both
 
 ## Question Design Rules
-- For activity preferences: Include location-specific examples in the choices, not in the question.
+- For activity preferences: Include location-specific examples in the choices, do not include in the question.
+- For top_3_must_dos: Ensure the user ranks their top 3 choices from their selected activity preferences.
 - For timing: Include "Unknown/flexible" option
 
 ---
