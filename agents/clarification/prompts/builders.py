@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 # V2 Prompt Builders
 
-
 def get_initial_data_object() -> Dict[str, Any]:
     """
     Get the initial data object with all v2 fields set to null.
@@ -108,15 +107,20 @@ def build_user_prompt_v2(state: "ClarificationState") -> str:
 
     # Include cumulative data object
     data = state.get("data") or get_initial_data_object()
-    parts.append(f"Current collected data:\n{json.dumps(data, indent=2)}")
+    current_round = state["current_round"]
+
+    if current_round > 1:
+        parts.append(f"Current collected data:\n{json.dumps(data, indent=2, ensure_ascii=True, sort_keys=True)}")
+    else:
+        # manually append user trip details for round 1
+        parts.append(f"Round 1 - No Data has currently been collected.")
 
     # Include user's latest responses (for rounds 2+)
     user_response = state.get("user_response")
-    current_round = state["current_round"]
 
     if user_response and current_round > 1:
         parts.append(
-            f"\nUser's responses from Round {current_round - 1}:\n{json.dumps(user_response, indent=2)}"
+            f"\nUser's responses from Round {current_round - 1}:\n{json.dumps(user_response, indent=2, ensure_ascii=True, sort_keys=True)}"
         )
 
     # Round instruction

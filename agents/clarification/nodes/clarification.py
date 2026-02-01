@@ -25,6 +25,17 @@ from agents.shared.cache import load_system_prompt
 
 
 logger = logging.getLogger("agents.clarification")
+logger.setLevel(logging.INFO)  # log INFO and above
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
 
 # Default model for clarification
 DEFAULT_MODEL = "gpt-5-mini"

@@ -114,7 +114,7 @@ class DebugLogger:
             entry: Dictionary to write as JSON
         """
         with open(self.log_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            f.write(json.dumps(entry, ensure_ascii=True) + "\n")
 
     def log_llm_call(
         self,
