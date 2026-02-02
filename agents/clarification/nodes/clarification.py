@@ -70,6 +70,7 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         # Fallback: rebuild if cache miss (defensive)
         if system_prompt is None:
             system_prompt = build_system_prompt_v2(state)
+            print("CACHE MISS: Rebuilt system prompt")
             logger.warning(
                 f"Cache miss for session {session_id}, rebuilt system prompt"
             )
