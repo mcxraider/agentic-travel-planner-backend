@@ -92,22 +92,28 @@ class QuestionV2(BaseModel):
 
 
 class QuestionsStateV2(BaseModel):
-    """State information returned with questions (v2)."""
+    """
+    State information returned with questions (v2).
+
+    Note: score, missing_tier1, and missing_tier2 are calculated by code,
+    not provided by the LLM. The LLM only provides collected and conflicts_detected.
+    """
 
     collected: List[str] = Field(
         default_factory=list, description="Fields already collected"
     )
-    missing_tier1: List[str] = Field(
-        default_factory=list, description="Missing tier 1 fields"
-    )
-    missing_tier2: List[str] = Field(
-        default_factory=list, description="Missing tier 2 fields"
-    )
     conflicts_detected: List[str] = Field(
         default_factory=list, description="Detected conflicts between answers"
     )
-    score: int = Field(
-        default=0, ge=0, le=100, description="Current completeness score"
+    # The following are optional - calculated by code, not required from LLM
+    missing_tier1: Optional[List[str]] = Field(
+        default=None, description="Missing tier 1 fields (code-calculated)"
+    )
+    missing_tier2: Optional[List[str]] = Field(
+        default=None, description="Missing tier 2 fields (code-calculated)"
+    )
+    score: Optional[int] = Field(
+        default=None, ge=0, le=100, description="Completeness score (code-calculated)"
     )
 
 
@@ -159,14 +165,14 @@ class QuestionsResponseV2(BaseModel):
 
     This model validates the JSON output from the LLM during
     clarification rounds.
+
+    Note: status is no longer provided by the LLM - completion is
+    determined by code based on calculated score and stopping conditions.
     """
 
-    status: Literal["in_progress", "complete"] = Field(
-        description="Status: 'in_progress' or 'complete'"
-    )
-    round: int = Field(ge=1, le=3, description="Current round number (1-3)")
+    round: int = Field(ge=1, le=4, description="Current round number (1-4)")
     questions: List[QuestionV2] = Field(
-        default_factory=list, description="Questions for this round (empty if complete)"
+        default_factory=list, description="Questions for this round"
     )
     state: QuestionsStateV2 = Field(description="Current state information")
     data: ClarificationDataV2 = Field(description="Cumulative data object")

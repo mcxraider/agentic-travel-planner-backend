@@ -25,6 +25,17 @@ from agents.shared.cache import load_system_prompt
 
 
 logger = logging.getLogger("agents.clarification")
+logger.setLevel(logging.INFO)  # log INFO and above
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
 
 # Default model for clarification
 DEFAULT_MODEL = "gpt-5-mini"
@@ -59,6 +70,7 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         # Fallback: rebuild if cache miss (defensive)
         if system_prompt is None:
             system_prompt = build_system_prompt_v2(state)
+            print("CACHE MISS: Rebuilt system prompt")
             logger.warning(
                 f"Cache miss for session {session_id}, rebuilt system prompt"
             )
@@ -119,9 +131,11 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         result = build_state_update_for_v2_response(state, parsed_response)
 
         # Log completion
+        is_complete = result.get('clarification_complete', False)
+        status = "complete" if is_complete else "in_progress"
         print(
             f"✅ Round {state['current_round']} completed - "
-            f"Status: {parsed_response['status']} - "
+            f"Status: {status} - "
             f"Score: {result.get('completeness_score', 0)}/100"
         )
 

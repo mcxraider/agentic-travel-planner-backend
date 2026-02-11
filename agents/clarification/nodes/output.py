@@ -13,7 +13,16 @@ from agents.shared.contracts.clarification_output import ClarificationOutputV2
 
 
 logger = logging.getLogger("agents.clarification")
+logger.setLevel(logging.INFO)  # log INFO and above
 
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 def output_node(state: ClarificationState) -> Dict[str, Any]:
     """
@@ -40,7 +49,7 @@ def output_node(state: ClarificationState) -> Dict[str, Any]:
     print(f"\nCompleteness Score: {state['completeness_score']}/100")
     print(f"Rounds Completed: {state['current_round']}")
     print("\nCollected Data (V2):")
-    print(json.dumps(data, indent=2))
+    print(json.dumps(data, indent=2, ensure_ascii=True, sort_keys=True))
     print("=" * 80 + "\n")
 
     # Log structured event

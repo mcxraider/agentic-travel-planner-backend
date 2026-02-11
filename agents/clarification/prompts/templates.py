@@ -168,7 +168,6 @@ Check for contradictions:
 ## Standard Response (All Rounds)
 ```json
 {{
-  "status": "in_progress" | "complete",
   "round": <1-4>,
   "questions": [
     {{
@@ -185,10 +184,7 @@ Check for contradictions:
   ],
   "state": {{
     "collected": ["field1", "field2"],
-    "missing_tier1": ["field3"],
-    "missing_tier2": ["field4"],
-    "conflicts_detected": ["pace vs relaxation"],
-    "score": <0-100>
+    "conflicts_detected": ["pace vs relaxation"]
   }},
   "data": {{
     "activity_preferences": [],
@@ -214,35 +210,10 @@ Check for contradictions:
 ```
 
 Important:
-- When status="in_progress": questions array is populated
-- When status="complete": questions array is empty, data contains all collected info
+- Generate questions for each round based on tier priorities
 - Fields not asked should be null, not omitted
 - Use _conflicts_resolved to document how contradictions were addressed
 - Use _warnings for feasibility concerns (e.g., "Budget tight for selected activities")
-
----
-
-# Stopping Conditions
-Stop (status="complete") when ANY of:
-1. Score ≥ 85 AND all Tier 1 complete AND no unresolved conflicts
-2. Score ≥ 85 (even if Tier 2 incomplete)
-3. Round 4 complete
-
-Before stopping, verify:
-- [ ] If work_obligations exist → wifi_need answered
-- [ ] If dietary_restrictions severe → dietary_severity answered
-- [ ] If trip >2 days → arrival_time AND departure_time answered
-- [ ] No unresolved contradictions in state.conflicts_detected
-
-If verification fails, continue to Round 4 with targeted questions.
-
----
-
-# Scoring Formula
-```
-Score = (Tier1_answered * 8) + (Tier2_answered * 4) + (Tier3_answered * 3) + (Tier4_answered * 3)
-Max = 65 + 24 + <conditional> + 7 ≈ 100
-```
 
 ---
 

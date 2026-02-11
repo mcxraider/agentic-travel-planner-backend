@@ -380,5 +380,5 @@ if __name__ == "__main__":
     if final_result:
         print("\n" + "=" * 80)
         print("FINAL RESULT:")
-        print(json.dumps(final_result.get("collected_data", {}), indent=2))
+        print(json.dumps(final_result.get("collected_data", {}), indent=2, ensure_ascii=True, sort_keys=True))
         print("=" * 80)
