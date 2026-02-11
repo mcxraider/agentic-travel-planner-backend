@@ -131,9 +131,11 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         result = build_state_update_for_v2_response(state, parsed_response)
 
         # Log completion
+        is_complete = result.get('clarification_complete', False)
+        status = "complete" if is_complete else "in_progress"
         print(
             f"✅ Round {state['current_round']} completed - "
-            f"Status: {parsed_response['status']} - "
+            f"Status: {status} - "
             f"Score: {result.get('completeness_score', 0)}/100"
         )
 
