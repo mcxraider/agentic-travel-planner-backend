@@ -38,7 +38,7 @@ logger.addHandler(console_handler)
 
 
 # Default model for clarification
-DEFAULT_MODEL = "gpt-5-mini"
+DEFAULT_MODEL = "gpt-4.1-mini"
 
 
 def clarification_node(state: ClarificationState) -> Dict[str, Any]:

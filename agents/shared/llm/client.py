@@ -89,7 +89,7 @@ def get_llm_response_with_usage(
     client: OpenAI,
     user_prompt: str,
     system_prompt: str,
-    model: str = "gpt-5-mini",
+    model: str = "gpt-4.1-mini",
 ) -> Tuple[str, Dict[str, int]]:
     """
     Get LLM response with token usage information.
