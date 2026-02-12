@@ -39,7 +39,7 @@ def get_initial_data_object() -> Dict[str, Any]:
         "arrival_time": None,
         "departure_time": None,
         "budget_priority": None,
-        "accommodation_style": None,
+        "accommodation_style": [],
         # Tier 3: Conditional Critical
         "wifi_need": None,
         "dietary_severity": None,

@@ -137,7 +137,7 @@ class ClarificationDataV2(BaseModel):
     arrival_time: Optional[str] = None
     departure_time: Optional[str] = None
     budget_priority: Optional[str] = None
-    accommodation_style: Optional[str] = None
+    accommodation_style: Optional[List[str]] = None
 
     # Tier 3: Conditional Critical
     wifi_need: Optional[str] = None

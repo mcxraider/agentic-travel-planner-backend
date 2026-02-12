@@ -200,7 +200,7 @@ class TestCalculateCompletenessScore:
             "arrival_time": "morning",
             "departure_time": "evening",
             "budget_priority": "balanced",
-            "accommodation_style": "mid-range",
+            "accommodation_style": ["mid-range"],
             # Tier 3 (30 points if all elevated)
             "wifi_need": "essential",
             "dietary_severity": "strict",
@@ -288,7 +288,7 @@ class TestShouldCompleteClarification:
             "arrival_time": "morning",
             "departure_time": "evening",
             "budget_priority": "balanced",
-            "accommodation_style": "mid-range",
+            "accommodation_style": ["mid-range"],
             # Tier 3 (3 points) - not elevated
             "wifi_need": "nice to have",
             # Tier 4 (9 points)
@@ -321,7 +321,7 @@ class TestShouldCompleteClarification:
             "arrival_time": "morning",
             "departure_time": "evening",
             "budget_priority": "balanced",
-            "accommodation_style": "mid-range",
+            "accommodation_style": ["mid-range"],
             # Elevated Tier 3 = 10 points
             "wifi_need": "essential",
             # Tier 4 = 9 points
@@ -360,7 +360,7 @@ class TestShouldCompleteClarification:
             "arrival_time": "morning",
             "departure_time": "evening",
             "budget_priority": "balanced",
-            "accommodation_style": "mid-range",
+            "accommodation_style": ["mid-range"],
             # Tier 3 (3 points) - not elevated
             "wifi_need": "nice to have",
             # Tier 4 (9 points)
@@ -392,7 +392,7 @@ class TestShouldCompleteClarification:
             "arrival_time": "morning",
             "departure_time": "evening",
             "budget_priority": "balanced",
-            "accommodation_style": "mid-range",
+            "accommodation_style": ["mid-range"],
             # Tier 4 (9 points)
             "special_logistics": "early",
             "daily_rhythm": "early bird",

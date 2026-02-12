@@ -117,7 +117,7 @@ Output only valid JSON. No prose, no markdown wrappers, no explanations.
 8. arrival_time: Early AM (<9am), Mid-morning (9am-12pm), Afternoon (12-5pm), Evening (5pm+), custom
 9. departure_time: [same options as arrival]
 10. budget_priority: experiences > comfort, balanced, comfort > experiences
-11. accommodation_style: hostel/budget, mid-range hotel, resort/luxury, local homestay
+11. accommodation_style (multiple): hostel/budget, mid-range hotel, resort/luxury, local homestay
 
 ## Tier 3: Conditional Critical (3 points each)
 These escalate to Tier 1 if triggered by user profile:
@@ -158,7 +158,8 @@ Check for contradictions:
 - If trip >2 days but no arrival/departure times → Must ask both
 
 ## Question Design Rules
-- For activity preferences: Include location-specific examples in the choices, do not include in the question.
+- For activity preferences: Include the location-specific examples in each of the choices, do not include the examples in the question.
+- For activity preferences: User must select a minimum of 3 options.
 - For top_3_must_dos: Ensure the user ranks their top 3 choices from their selected activity preferences.
 - For timing: Include "Unknown/flexible" option
 
@@ -197,7 +198,7 @@ Check for contradictions:
     "arrival_time": "",
     "departure_time": "",
     "budget_priority": "",
-    "accommodation_style": "",
+    "accommodation_style": [],
     "wifi_need": "",
     "dietary_severity": "",
     "special_logistics": "",
