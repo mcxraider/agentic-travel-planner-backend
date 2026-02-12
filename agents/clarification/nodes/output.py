@@ -12,17 +12,8 @@ from agents.clarification.schemas import ClarificationState
 from agents.shared.contracts.clarification_output import ClarificationOutputV2
 
 
-logger = logging.getLogger("agents.clarification")
-logger.setLevel(logging.INFO)  # log INFO and above
+logger = logging.getLogger(__name__)
 
-# Console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
 
 def output_node(state: ClarificationState) -> Dict[str, Any]:
     """
@@ -39,31 +30,28 @@ def output_node(state: ClarificationState) -> Dict[str, Any]:
     Returns:
         Empty dict (no state changes needed at this point)
     """
+    session_id = state.get("session_id", "unknown")
+    _log = f"[session={session_id}] [graph=clarification] [node=output] "
+
     # V2: Use data object if available, fall back to collected_data
     data = state.get("data") or state.get("collected_data", {})
 
-    # Log completion summary
-    print("\n" + "=" * 80)
-    print("CLARIFICATION COMPLETE (V2)!")
-    print("=" * 80)
-    print(f"\nCompleteness Score: {state['completeness_score']}/100")
-    print(f"Rounds Completed: {state['current_round']}")
-    print("\nCollected Data (V2):")
-    print(json.dumps(data, indent=2, ensure_ascii=True, sort_keys=True))
-    print("=" * 80 + "\n")
-
-    # Log structured event
     collected_fields = [
         k for k, v in data.items() if v is not None and not k.startswith("_")
     ]
+    missing_fields = [
+        k for k, v in data.items() if v is None and not k.startswith("_")
+    ]
+
     logger.info(
-        "Clarification complete (v2)",
-        extra={
-            "event": "clarification_complete_v2",
-            "completeness_score": state["completeness_score"],
-            "rounds_completed": state["current_round"],
-            "collected_fields": collected_fields,
-        },
+        f"{_log}Entering node | score={state['completeness_score']}/100, "
+        f"rounds={state['current_round']}, "
+        f"fields_collected={len(collected_fields)}/{len(collected_fields) + len(missing_fields)}"
+    )
+    logger.info(f"{_log}Collected: {collected_fields}")
+    logger.debug(f"{_log}Missing: {missing_fields}")
+    logger.debug(
+        f"{_log}Full data: {json.dumps(data, ensure_ascii=True, sort_keys=True)}"
     )
 
     # Validate against v2 output contract (for downstream agents)

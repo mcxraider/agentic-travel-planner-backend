@@ -24,17 +24,7 @@ from agents.shared.logging.debug_logger import get_or_create_logger
 from agents.shared.cache import load_system_prompt
 
 
-logger = logging.getLogger("agents.clarification")
-logger.setLevel(logging.INFO)  # log INFO and above
-
-# Console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+logger = logging.getLogger(__name__)
 
 
 # Default model for clarification
@@ -60,43 +50,40 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
     Raises:
         Exception: If LLM call or parsing fails after all retries
     """
+    session_id = state.get("session_id", "unknown")
+    current_round = state.get("current_round", 0)
+    score = state.get("completeness_score", 0)
+    _log = f"[session={session_id}] [graph=clarification] [node=clarification] "
+
+    logger.info(
+        f"{_log}Entering node | round={current_round}, score={score}/100, "
+        f"destination={state.get('destination', 'N/A')}"
+    )
+
     try:
         client = get_cached_client()
 
         # Load cached system prompt (built once at session start for OpenAI caching)
-        session_id = state.get("session_id")
-        system_prompt = load_system_prompt(session_id) if session_id else None
+        system_prompt = load_system_prompt(session_id) if session_id != "unknown" else None
 
         # Fallback: rebuild if cache miss (defensive)
         if system_prompt is None:
             system_prompt = build_system_prompt_v2(state)
-            print("CACHE MISS: Rebuilt system prompt")
-            logger.warning(
-                f"Cache miss for session {session_id}, rebuilt system prompt"
-            )
+            logger.warning(f"{_log}Cache miss - rebuilt system prompt")
 
         # Build user prompt (changes each round with new data)
         user_prompt = build_user_prompt_v2(state)
 
         # Get debug logger from registry if session_id is available
-        debug_logger = get_or_create_logger(session_id) if session_id else None
+        debug_logger = get_or_create_logger(session_id) if session_id != "unknown" else None
 
-        # Log the call
+        # Log collected fields so far
+        filled_fields = [k for k, v in state.get("data", {}).items() if v is not None]
         logger.info(
-            f"Round {state['current_round']} - Calling LLM (v2)",
-            extra={
-                "round": state["current_round"],
-                "data_keys": list(
-                    k for k, v in state.get("data", {}).items() if v is not None
-                ),
-                "completeness_score": state.get("completeness_score", 0),
-            },
+            f"{_log}Calling LLM | model={DEFAULT_MODEL}, "
+            f"filled_fields={len(filled_fields)}/{len(state.get('data', {}))}"
         )
-
-        # Debug output (for development)
-        print("\n" + "=" * 80)
-        print(f"🤖 Round {state['current_round']} - Calling LLM (v2)")
-        print("=" * 80)
+        logger.debug(f"{_log}Filled fields: {filled_fields}")
 
         # Call LLM with timing
         start_time = time.perf_counter()
@@ -108,7 +95,7 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         # Log to debug file
         if debug_logger:
             debug_logger.log_llm_call(
-                round_num=state["current_round"],
+                round_num=current_round,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 response=llm_response,
@@ -118,11 +105,10 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
                 model=DEFAULT_MODEL,
             )
 
-        # Print token usage to console
-        print(
-            f"\n📈 Token Usage: {usage['input_tokens']} in / {usage['output_tokens']} out"
+        logger.info(
+            f"{_log}LLM responded | duration={duration_ms:.0f}ms, "
+            f"tokens_in={usage['input_tokens']}, tokens_out={usage['output_tokens']}"
         )
-        print(f"⏱️  LLM Duration: {duration_ms:.2f}ms")
 
         # Parse v2 response (unified format for both in-progress and complete)
         parsed_response = parse_clarification_response_v2(llm_response)
@@ -130,26 +116,29 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         # Build state update using v2 handler
         result = build_state_update_for_v2_response(state, parsed_response)
 
-        # Log completion
+        # Log outcome
         is_complete = result.get('clarification_complete', False)
-        status = "complete" if is_complete else "in_progress"
-        print(
-            f"✅ Round {state['current_round']} completed - "
-            f"Status: {status} - "
-            f"Score: {result.get('completeness_score', 0)}/100"
+        new_score = result.get('completeness_score', 0)
+        num_questions = len(result.get('current_questions', {}).get('questions', []))
+        logger.info(
+            f"{_log}Node finished | complete={is_complete}, score={new_score}/100, "
+            f"questions_generated={num_questions}"
         )
+
+        if is_complete:
+            logger.info(f"{_log}Clarification COMPLETE - will route to output node")
+        else:
+            logger.info(
+                f"{_log}Clarification IN PROGRESS - will pause for human feedback "
+                f"(interrupt_after=clarification)"
+            )
 
         return result
 
     except ParseError as e:
-        logger.error(f"Parse error in clarification_node: {e}")
-        print(f"❌ Parse error in clarification_node: {e}")
+        logger.error(f"{_log}Parse error: {e}")
         raise
 
     except Exception as e:
-        logger.error(f"Error in clarification_node: {e}")
-        print(f"❌ Error in clarification_node: {e}")
-        import traceback
-
-        traceback.print_exc()
+        logger.exception(f"{_log}Unhandled error: {e}")
         raise
