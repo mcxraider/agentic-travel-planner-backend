@@ -8,7 +8,7 @@ automatic retries using tenacity.
 import os
 from typing import List, Dict, Optional, Tuple
 
-from openai import OpenAI
+from openai import OpenAI, APIError, RateLimitError, APITimeoutError, APIConnectionError
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -38,14 +38,14 @@ def get_cached_client() -> OpenAI:
                 "OPENAI_API_KEY_1 environment variable is not set. "
                 "Please set it to your OpenAI API key."
             )
-        _client = OpenAI(api_key=api_key)
+        _client = OpenAI(api_key=api_key, timeout=60.0)
     return _client
 
 
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((Exception,)),
+    retry=retry_if_exception_type((APIError, RateLimitError, APITimeoutError, APIConnectionError)),
     reraise=True,
 )
 def call_llm_with_usage(
@@ -65,7 +65,7 @@ def call_llm_with_usage(
         Tuple of (response content, usage dict with input/output/total tokens)
 
     Raises:
-        Exception: If all retry attempts fail.
+        APIError, RateLimitError, APITimeoutError, APIConnectionError: If all retry attempts fail.
     """
     if client is None:
         client = get_cached_client()
@@ -89,7 +89,7 @@ def get_llm_response_with_usage(
     client: OpenAI,
     user_prompt: str,
     system_prompt: str,
-    model: str = "gpt-5-mini",
+    model: str = "gpt-4.1-mini",
 ) -> Tuple[str, Dict[str, int]]:
     """
     Get LLM response with token usage information.

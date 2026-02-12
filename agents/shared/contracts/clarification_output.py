@@ -61,9 +61,9 @@ class ClarificationOutputV2(BaseModel):
         default=None,
         description="Budget priority: 'experiences > comfort', 'balanced', 'comfort > experiences'",
     )
-    accommodation_style: Optional[str] = Field(
-        default=None,
-        description="Accommodation style preference",
+    accommodation_style: List[str] = Field(
+        default_factory=list,
+        description="Preferred accommodation styles (e.g., 'mid-range hotel', 'local homestay')",
     )
 
     # Tier 3: Conditional Critical
@@ -144,7 +144,7 @@ class ClarificationOutputV2(BaseModel):
             arrival_time=data.get("arrival_time"),
             departure_time=data.get("departure_time"),
             budget_priority=data.get("budget_priority"),
-            accommodation_style=data.get("accommodation_style"),
+            accommodation_style=data.get("accommodation_style") or [],
             # Tier 3
             wifi_need=data.get("wifi_need"),
             dietary_severity=data.get("dietary_severity"),
@@ -181,7 +181,7 @@ class ClarificationOutputV2(BaseModel):
                 "arrival_time": "Early AM (<9am)",
                 "departure_time": "Afternoon (12-5pm)",
                 "budget_priority": "experiences > comfort",
-                "accommodation_style": "mid-range hotel",
+                "accommodation_style": ["mid-range hotel", "local homestay"],
                 "wifi_need": "Essential (daily work)",
                 "daily_rhythm": "early bird",
                 "downtime_preference": "some rest",

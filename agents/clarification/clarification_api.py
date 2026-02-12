@@ -5,12 +5,16 @@ Provides REST API for starting clarification sessions, submitting
 responses, and managing session state.
 """
 
+import logging
 import time
 import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 
 from fastapi import APIRouter, HTTPException, status
+
+
+logger = logging.getLogger(__name__)
 
 from agents.clarification.schemas import (
     ClarificationState,
@@ -114,6 +118,13 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
 
     # Generate session ID
     session_id = str(uuid.uuid4())
+    _log = f"[session={session_id}] [graph=clarification] [api=start] "
+
+    logger.info(
+        f"{_log}New session | destination={request.destination}, "
+        f"dates={request.start_date} to {request.end_date}, "
+        f"budget={request.budget} {request.currency}, party={request.travel_party}"
+    )
 
     # Get or create debug logger from registry (ensures same instance is used)
     debug_logger = get_or_create_logger(session_id)
@@ -130,6 +141,7 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
     config = {"configurable": {"thread_id": session_id}}
 
     try:
+        logger.info(f"{_log}Invoking graph | round=1, entry_node=clarification")
         # calls the graph, for the current state
         result = graph.invoke(initial_state, config)
 
@@ -153,6 +165,12 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
             "config": config,
             "created_at": datetime.utcnow().isoformat(),
         }
+
+        logger.info(
+            f"{_log}Graph paused (interrupt_after=clarification) | "
+            f"WAITING FOR HUMAN FEEDBACK | "
+            f"score={result.get('completeness_score', 0)}/100"
+        )
 
         # Extract questions from result (v2 format)
         questions_data = result.get("current_questions", {})
@@ -199,7 +217,11 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
             success=True,
         )
 
-        print(result)
+        logger.info(
+            f"{_log}Response ready | questions={len(questions)}, "
+            f"api_duration={api_duration_ms:.0f}ms"
+        )
+
         return StartSessionResponseV2(
             session_id=session_id,
             round=questions_data.get("round", 1),
@@ -251,6 +273,12 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
     api_start_time = time.perf_counter()
 
     session_id = request.session_id
+    _log = f"[session={session_id}] [graph=clarification] [api=respond] "
+
+    logger.info(
+        f"{_log}Human feedback received | "
+        f"fields_answered={list(request.responses.keys())}"
+    )
 
     # Check session exists
     if session_id not in _sessions:
@@ -266,6 +294,11 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
     current_state = session["state"]
     config = session["config"]
     current_round = current_state["current_round"]
+
+    logger.info(
+        f"{_log}Resuming graph from checkpoint | "
+        f"current_round={current_round}, score={current_state.get('completeness_score', 0)}/100"
+    )
 
     # Check if already complete
     if current_state.get("clarification_complete", False):
@@ -322,6 +355,10 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
     graph = get_graph()
 
     try:
+        logger.info(
+            f"{_log}Invoking graph | round={next_round}, "
+            f"resuming_node=clarification (from checkpoint)"
+        )
         result = graph.invoke(next_state, config)
 
         if result is None:
@@ -340,6 +377,21 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
 
         # Update session state
         _sessions[session_id]["state"] = result
+
+        is_complete = result.get("clarification_complete", False)
+        new_score = result.get("completeness_score", 0)
+
+        if is_complete:
+            logger.info(
+                f"{_log}Graph completed | score={new_score}/100, "
+                f"total_rounds={next_round}, next_node=output -> END"
+            )
+        else:
+            logger.info(
+                f"{_log}Graph paused (interrupt_after=clarification) | "
+                f"WAITING FOR HUMAN FEEDBACK | "
+                f"round={next_round}, score={new_score}/100"
+            )
 
         # Extract v2 questions data
         questions_data = result.get("current_questions", {})
