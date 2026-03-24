@@ -76,76 +76,88 @@ def _generate_day_events(
     # Morning
     if not is_arrival_day:
         title, category, duration, cost = _MORNING_EVENTS[day_idx]
-        events.append(ItineraryEvent(
-            event_id=f"d{day_number}_e{event_counter}",
-            time_slot="08:00-09:00",
-            title=title,
-            description=f"{title} in {city}",
-            category=category,
-            location=city,
-            estimated_cost_usd=cost,
-            duration_hours=duration,
-        ))
+        events.append(
+            ItineraryEvent(
+                event_id=f"d{day_number}_e{event_counter}",
+                time_slot="08:00-09:00",
+                title=title,
+                description=f"{title} in {city}",
+                category=category,
+                location=city,
+                estimated_cost_usd=cost,
+                duration_hours=duration,
+            )
+        )
         event_counter += 1
 
     # Mid-morning activity
     if not is_departure_day:
         title, category, duration, cost = _MIDDAY_EVENTS[day_idx]
         start_hour = "10:00" if not is_arrival_day else "14:00"
-        events.append(ItineraryEvent(
-            event_id=f"d{day_number}_e{event_counter}",
-            time_slot=f"{start_hour}-{int(start_hour.split(':')[0]) + int(duration)}:00",
-            title=title,
-            description=f"{title} in {city}",
-            category=category,
-            location=city,
-            estimated_cost_usd=cost,
-            duration_hours=duration,
-        ))
+        events.append(
+            ItineraryEvent(
+                event_id=f"d{day_number}_e{event_counter}",
+                time_slot=f"{start_hour}-{int(start_hour.split(':')[0]) + int(duration)}:00",
+                title=title,
+                description=f"{title} in {city}",
+                category=category,
+                location=city,
+                estimated_cost_usd=cost,
+                duration_hours=duration,
+            )
+        )
         event_counter += 1
 
     # Lunch
     title, category, duration, cost = _LUNCH_EVENTS[day_idx % len(_LUNCH_EVENTS)]
-    events.append(ItineraryEvent(
-        event_id=f"d{day_number}_e{event_counter}",
-        time_slot="12:30-13:30",
-        title=title,
-        description=f"{title} in {city}",
-        category=category,
-        location=city,
-        estimated_cost_usd=cost,
-        duration_hours=duration,
-    ))
-    event_counter += 1
-
-    # Afternoon (skip if departure day or relaxed pace)
-    if not is_departure_day:
-        title, category, duration, cost = _AFTERNOON_EVENTS[day_idx % len(_AFTERNOON_EVENTS)]
-        events.append(ItineraryEvent(
+    events.append(
+        ItineraryEvent(
             event_id=f"d{day_number}_e{event_counter}",
-            time_slot="15:00-17:00",
+            time_slot="12:30-13:30",
             title=title,
             description=f"{title} in {city}",
             category=category,
             location=city,
             estimated_cost_usd=cost,
             duration_hours=duration,
-        ))
+        )
+    )
+    event_counter += 1
+
+    # Afternoon (skip if departure day or relaxed pace)
+    if not is_departure_day:
+        title, category, duration, cost = _AFTERNOON_EVENTS[
+            day_idx % len(_AFTERNOON_EVENTS)
+        ]
+        events.append(
+            ItineraryEvent(
+                event_id=f"d{day_number}_e{event_counter}",
+                time_slot="15:00-17:00",
+                title=title,
+                description=f"{title} in {city}",
+                category=category,
+                location=city,
+                estimated_cost_usd=cost,
+                duration_hours=duration,
+            )
+        )
         event_counter += 1
 
     # Dinner (skip if departure day)
     if not is_departure_day:
         title, category, duration, cost = _DINNER_EVENTS[day_idx % len(_DINNER_EVENTS)]
-        events.append(ItineraryEvent(
-            event_id=f"d{day_number}_e{event_counter}",
-            time_slot="19:00-20:30",
-            title=title,
-            description=f"{title} in {city}",
-            category=category,
-            location=city,
-            estimated_cost_usd=cost,
-            duration_hours=duration,
-        ))
+        events.append(
+            ItineraryEvent(
+                event_id=f"d{day_number}_e{event_counter}",
+                time_slot="19:00-20:30",
+                title=title,
+                description=f"{title} in {city}",
+                category=category,
+                location=city,
+                estimated_cost_usd=cost,
+                duration_hours=duration,
+            )
+        )
         event_counter += 1
 
     return events
@@ -252,7 +264,9 @@ def generate_mock_itinerary(
     transport_total = budget * 0.10
     activities_total = total_cost
 
-    total_estimated = accommodation_total + food_total + transport_total + activities_total
+    total_estimated = (
+        accommodation_total + food_total + transport_total + activities_total
+    )
 
     cost_summary = CostSummary(
         total_estimated_usd=round(total_estimated, 2),

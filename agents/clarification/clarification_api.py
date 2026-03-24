@@ -229,9 +229,7 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponse:
                 conflicts_detected=state_info.get("conflicts_detected", []),
                 score=state_info.get("score", 0),
             ),
-            data=ClarificationData(**data_info)
-            if data_info
-            else ClarificationData(),
+            data=ClarificationData(**data_info) if data_info else ClarificationData(),
         )
 
     except HTTPException:
@@ -321,9 +319,7 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
                     "score", current_state.get("completeness_score", 100)
                 ),
             ),
-            data=ClarificationData(**data_info)
-            if data_info
-            else ClarificationData(),
+            data=ClarificationData(**data_info) if data_info else ClarificationData(),
         )
 
     current_data = current_state.get("data") or get_initial_data_object()
@@ -474,9 +470,7 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponse:
                 conflicts_detected=state_info.get("conflicts_detected", []),
                 score=state_info.get("score", 0),
             ),
-            data=ClarificationData(**data_info)
-            if data_info
-            else ClarificationData(),
+            data=ClarificationData(**data_info) if data_info else ClarificationData(),
         )
 
     except HTTPException:

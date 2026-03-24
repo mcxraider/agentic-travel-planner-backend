@@ -13,9 +13,7 @@ class ItineraryEvent(BaseModel):
     """A single event/activity within a day."""
 
     event_id: str = Field(description="Unique event identifier")
-    time_slot: str = Field(
-        description="Time slot (e.g., '09:00-11:00', 'Morning')"
-    )
+    time_slot: str = Field(description="Time slot (e.g., '09:00-11:00', 'Morning')")
     title: str = Field(description="Event title")
     description: str = Field(description="Event description")
     category: str = Field(
@@ -25,21 +23,15 @@ class ItineraryEvent(BaseModel):
     estimated_cost_usd: Optional[float] = Field(
         default=None, description="Estimated cost in USD"
     )
-    duration_hours: float = Field(
-        ge=0.25, description="Duration in hours"
-    )
-    notes: Optional[str] = Field(
-        default=None, description="Additional notes or tips"
-    )
+    duration_hours: float = Field(ge=0.25, description="Duration in hours")
+    notes: Optional[str] = Field(default=None, description="Additional notes or tips")
 
 
 class ItineraryDay(BaseModel):
     """A single day in the itinerary."""
 
     day_number: int = Field(ge=1, description="Day number (1-indexed)")
-    date: Optional[str] = Field(
-        default=None, description="Date in YYYY-MM-DD format"
-    )
+    date: Optional[str] = Field(default=None, description="Date in YYYY-MM-DD format")
     city: str = Field(description="City for this day")
     theme: str = Field(
         description="Day theme (e.g., 'Cultural Exploration', 'Beach & Relaxation')"
@@ -132,8 +124,6 @@ class PlannerOutputV1(BaseModel):
                         "activities": 20.0,
                     },
                 },
-                "planning_notes": [
-                    "Book Mount Batur sunrise trek in advance"
-                ],
+                "planning_notes": ["Book Mount Batur sunrise trek in advance"],
             }
         }

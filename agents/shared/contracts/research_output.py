@@ -30,9 +30,7 @@ class PointOfInterest(BaseModel):
         default_factory=list, description="Tags for matching preferences"
     )
     address: Optional[str] = Field(default=None, description="Location address")
-    opening_hours: Optional[str] = Field(
-        default=None, description="Opening hours info"
-    )
+    opening_hours: Optional[str] = Field(default=None, description="Opening hours info")
 
 
 class CityResearch(BaseModel):
@@ -89,9 +87,7 @@ class BudgetAnalysis(BaseModel):
     estimated_accommodation_per_night_usd: float = Field(
         description="Estimated nightly accommodation cost"
     )
-    estimated_food_per_day_usd: float = Field(
-        description="Estimated daily food cost"
-    )
+    estimated_food_per_day_usd: float = Field(description="Estimated daily food cost")
     estimated_transport_per_day_usd: float = Field(
         description="Estimated daily transport cost"
     )

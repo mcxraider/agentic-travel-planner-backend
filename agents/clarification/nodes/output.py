@@ -38,9 +38,7 @@ def output_node(state: ClarificationState) -> Dict[str, Any]:
     collected_fields = [
         k for k, v in data.items() if v is not None and not k.startswith("_")
     ]
-    missing_fields = [
-        k for k, v in data.items() if v is None and not k.startswith("_")
-    ]
+    missing_fields = [k for k, v in data.items() if v is None and not k.startswith("_")]
 
     logger.info(
         f"{_log}Entering node | score={state['completeness_score']}/100, "

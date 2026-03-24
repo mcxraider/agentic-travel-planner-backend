@@ -17,9 +17,7 @@ from agents.graph.orchestrator_api import router as orchestrator_router
 # ============================================================================
 # Logging configuration (single source of truth for all agents)
 # ============================================================================
-LOG_FORMAT = (
-    "%(asctime)s | %(levelname)-8s | %(name)-35s | %(message)s"
-)
+LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)-35s | %(message)s"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -54,6 +52,10 @@ app.add_middleware(
 # Include routers
 app.include_router(clarification_router)
 app.include_router(orchestrator_router)
+
+# LangSmith tracing is enabled automatically when LANGSMITH_TRACING=true is set.
+# No explicit code integration is required beyond the environment variables.
+# Graph invocations that pass a thread_id will appear as grouped runs in LangSmith.
 
 
 @app.get("/")
