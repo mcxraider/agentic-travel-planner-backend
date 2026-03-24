@@ -21,19 +21,18 @@ from agents.clarification.schemas import (
     StartSessionRequest,
     RespondRequest,
     SessionStatusResponse,
-    # V2 models
-    StartSessionResponseV2,
-    RespondResponseV2,
-    QuestionV2,
-    QuestionsStateV2,
-    ClarificationDataV2,
+    StartSessionResponse,
+    RespondResponse,
+    Question,
+    QuestionsState,
+    ClarificationData,
 )
 from agents.clarification.graph.build import create_clarification_graph
 from agents.clarification.response_parser import merge_collected_data
 from agents.clarification.prompts.builders import (
     get_initial_data_object,
     merge_user_responses_into_data,
-    build_system_prompt_v2,
+    build_system_prompt,
 )
 from agents.shared.logging.debug_logger import get_or_create_logger
 from agents.shared.cache import save_system_prompt
@@ -91,7 +90,6 @@ def create_initial_state(
         "current_questions": None,
         "user_response": None,
         "collected_data": {},
-        # V2: Initialize data object with all fields as null
         "data": get_initial_data_object(),
         "messages": [],
         # Debug/tracking
@@ -99,10 +97,10 @@ def create_initial_state(
     }
 
 
-@router.post("/start", response_model=StartSessionResponseV2)
-async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
+@router.post("/start", response_model=StartSessionResponse)
+async def start_session(request: StartSessionRequest) -> StartSessionResponse:
     """
-    Start a new clarification session (v2).
+    Start a new clarification session.
 
     Creates a new session with the provided user and trip information,
     then runs the first clarification round to generate initial questions.
@@ -133,7 +131,7 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
     initial_state = create_initial_state(request, session_id)
 
     # Build and cache system prompt for this session (enables OpenAI prompt caching)
-    system_prompt = build_system_prompt_v2(initial_state)
+    system_prompt = build_system_prompt(initial_state)
     save_system_prompt(session_id, system_prompt)
 
     # Get graph and run first round
@@ -172,7 +170,6 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
             f"score={result.get('completeness_score', 0)}/100"
         )
 
-        # Extract questions from result (v2 format)
         questions_data = result.get("current_questions", {})
 
         if not questions_data:
@@ -189,9 +186,8 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
                 detail="No questions generated in first round",
             )
 
-        # Build v2 response
         questions = [
-            QuestionV2(
+            Question(
                 id=q["id"],
                 field=q["field"],
                 tier=q.get("tier", 1),
@@ -222,20 +218,20 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
             f"api_duration={api_duration_ms:.0f}ms"
         )
 
-        return StartSessionResponseV2(
+        return StartSessionResponse(
             session_id=session_id,
             round=questions_data.get("round", 1),
             questions=questions,
-            state=QuestionsStateV2(
+            state=QuestionsState(
                 collected=state_info.get("collected", []),
                 missing_tier1=state_info.get("missing_tier1", []),
                 missing_tier2=state_info.get("missing_tier2", []),
                 conflicts_detected=state_info.get("conflicts_detected", []),
                 score=state_info.get("score", 0),
             ),
-            data=ClarificationDataV2(**data_info)
+            data=ClarificationData(**data_info)
             if data_info
-            else ClarificationDataV2(),
+            else ClarificationData(),
         )
 
     except HTTPException:
@@ -255,10 +251,10 @@ async def start_session(request: StartSessionRequest) -> StartSessionResponseV2:
         )
 
 
-@router.post("/respond", response_model=RespondResponseV2)
-async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
+@router.post("/respond", response_model=RespondResponse)
+async def respond_to_questions(request: RespondRequest) -> RespondResponse:
     """
-    Submit responses to clarification questions (v2).
+    Submit responses to clarification questions.
 
     Processes user responses and either returns the next round of questions
     or the final collected data if clarification is complete.
@@ -311,12 +307,12 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
         )
         data_info = current_state.get("data", {})
         state_info = current_state.get("current_questions", {}).get("state", {})
-        return RespondResponseV2(
+        return RespondResponse(
             session_id=session_id,
             complete=True,
             round=current_round,
             questions=[],
-            state=QuestionsStateV2(
+            state=QuestionsState(
                 collected=state_info.get("collected", []),
                 missing_tier1=state_info.get("missing_tier1", []),
                 missing_tier2=state_info.get("missing_tier2", []),
@@ -325,12 +321,11 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
                     "score", current_state.get("completeness_score", 100)
                 ),
             ),
-            data=ClarificationDataV2(**data_info)
+            data=ClarificationData(**data_info)
             if data_info
-            else ClarificationDataV2(),
+            else ClarificationData(),
         )
 
-    # V2: Merge responses into cumulative data object (server-side merging)
     current_data = current_state.get("data") or get_initial_data_object()
     merged_data = merge_user_responses_into_data(current_data, request.responses)
 
@@ -345,7 +340,7 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
     next_state = {
         "user_response": request.responses,
         "collected_data": new_collected_data,
-        "data": merged_data,  # V2: Pass merged data to LLM
+        "data": merged_data,
         "current_round": next_round,
         "current_questions": None,
         "session_id": session_id,
@@ -393,7 +388,6 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
                 f"round={next_round}, score={new_score}/100"
             )
 
-        # Extract v2 questions data
         questions_data = result.get("current_questions", {})
         state_info = questions_data.get("state", {})
         data_info = questions_data.get("data", result.get("data", {}))
@@ -413,21 +407,21 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
             # remove_logger(session_id)
             # Clean up cached system prompt for this session
             # delete_session_cache(session_id)
-            return RespondResponseV2(
+            return RespondResponse(
                 session_id=session_id,
                 complete=True,
                 round=questions_data.get("round", next_round),
                 questions=[],
-                state=QuestionsStateV2(
+                state=QuestionsState(
                     collected=state_info.get("collected", []),
                     missing_tier1=state_info.get("missing_tier1", []),
                     missing_tier2=state_info.get("missing_tier2", []),
                     conflicts_detected=state_info.get("conflicts_detected", []),
                     score=state_info.get("score", 100),
                 ),
-                data=ClarificationDataV2(**data_info)
+                data=ClarificationData(**data_info)
                 if data_info
-                else ClarificationDataV2(),
+                else ClarificationData(),
             )
 
         if not questions_data:
@@ -444,9 +438,8 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
                 detail="No questions generated but clarification not complete",
             )
 
-        # Build v2 questions
         questions = [
-            QuestionV2(
+            Question(
                 id=q["id"],
                 field=q["field"],
                 tier=q.get("tier", 1),
@@ -469,21 +462,21 @@ async def respond_to_questions(request: RespondRequest) -> RespondResponseV2:
             success=True,
         )
 
-        return RespondResponseV2(
+        return RespondResponse(
             session_id=session_id,
             complete=False,
             round=questions_data.get("round", next_round),
             questions=questions,
-            state=QuestionsStateV2(
+            state=QuestionsState(
                 collected=state_info.get("collected", []),
                 missing_tier1=state_info.get("missing_tier1", []),
                 missing_tier2=state_info.get("missing_tier2", []),
                 conflicts_detected=state_info.get("conflicts_detected", []),
                 score=state_info.get("score", 0),
             ),
-            data=ClarificationDataV2(**data_info)
+            data=ClarificationData(**data_info)
             if data_info
-            else ClarificationDataV2(),
+            else ClarificationData(),
         )
 
     except HTTPException:

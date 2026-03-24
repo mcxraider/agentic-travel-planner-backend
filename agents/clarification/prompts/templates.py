@@ -9,12 +9,11 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
-class SystemPromptConfigV2(BaseModel):
+class SystemPromptConfig(BaseModel):
     """
-    Configuration for system prompt generation (v2).
+    Configuration for system prompt generation.
 
-    This model validates the inputs needed to construct the v2 system prompt.
-    Uses renamed fields to match v2 placeholders.
+    This model validates the inputs needed to construct the system prompt.
     """
 
     # User context
@@ -25,7 +24,7 @@ class SystemPromptConfigV2(BaseModel):
     dietary_restrictions: Optional[str] = Field(default=None)
     specific_interests: Optional[List[str]] = Field(default=None)
 
-    # Trip context (renamed for v2)
+    # Trip context
     destination_country: str = Field(description="Trip destination country")
     destination_cities: Optional[str] = Field(
         default=None, description="Specific cities as comma-separated string"
@@ -40,10 +39,10 @@ class SystemPromptConfigV2(BaseModel):
 
     def format_prompt(self, template: str) -> str:
         """
-        Format the v2 template with this config's values.
+        Format the template with this config's values.
 
         Args:
-            template: The V2_SYSTEM_PROMPT_TEMPLATE string
+            template: The SYSTEM_PROMPT_TEMPLATE string
 
         Returns:
             Formatted prompt string with all placeholders filled
@@ -75,10 +74,10 @@ class SystemPromptConfigV2(BaseModel):
 
 
 # =============================================================================
-# V2 System Prompt Template
+# System Prompt Template
 # =============================================================================
 
-V2_SYSTEM_PROMPT_TEMPLATE = """# Role
+SYSTEM_PROMPT_TEMPLATE = """# Role
 You are a trip planning clarification agent, a professional at asking questions. Gather minimum necessary information to enable downstream itinerary generation through structured questions.
 
 Output only valid JSON. No prose, no markdown wrappers, no explanations.

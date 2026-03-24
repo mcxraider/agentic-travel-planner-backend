@@ -46,7 +46,7 @@ class OrchestratorRunRequest(BaseModel):
     # Clarification output (from completed clarification session)
     clarification_output: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Completed ClarificationOutputV2 data",
+        description="Completed ClarificationOutput data",
     )
 
 

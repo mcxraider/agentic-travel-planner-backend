@@ -11,12 +11,12 @@ from typing import Dict, Any
 
 from agents.clarification.schemas import ClarificationState
 from agents.clarification.prompts.builders import (
-    build_system_prompt_v2,
-    build_user_prompt_v2,
+    build_system_prompt,
+    build_user_prompt,
 )
 from agents.clarification.response_parser import (
-    parse_clarification_response_v2,
-    build_state_update_for_v2_response,
+    parse_clarification_response,
+    build_state_update,
     ParseError,
 )
 from agents.shared.llm.client import get_cached_client, get_llm_response_with_usage
@@ -68,11 +68,11 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
 
         # Fallback: rebuild if cache miss (defensive)
         if system_prompt is None:
-            system_prompt = build_system_prompt_v2(state)
+            system_prompt = build_system_prompt(state)
             logger.warning(f"{_log}Cache miss - rebuilt system prompt")
 
         # Build user prompt (changes each round with new data)
-        user_prompt = build_user_prompt_v2(state)
+        user_prompt = build_user_prompt(state)
 
         # Get debug logger from registry if session_id is available
         debug_logger = get_or_create_logger(session_id) if session_id != "unknown" else None
@@ -110,11 +110,11 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
             f"tokens_in={usage['input_tokens']}, tokens_out={usage['output_tokens']}"
         )
 
-        # Parse v2 response (unified format for both in-progress and complete)
-        parsed_response = parse_clarification_response_v2(llm_response)
+        # Parse response (unified format for both in-progress and complete)
+        parsed_response = parse_clarification_response(llm_response)
 
-        # Build state update using v2 handler
-        result = build_state_update_for_v2_response(state, parsed_response)
+        # Build state update from parsed response
+        result = build_state_update(state, parsed_response)
 
         # Log outcome
         is_complete = result.get('clarification_complete', False)

@@ -102,16 +102,11 @@ def merge_collected_data(
     return merged
 
 
-# =============================================================================
-# V2 Response Parsing
-# =============================================================================
-
-
-def parse_clarification_response_v2(raw_response: str) -> Dict[str, Any]:
+def parse_clarification_response(raw_response: str) -> Dict[str, Any]:
     """
-    Parse a v2 clarification response from the LLM.
+    Parse a clarification response from the LLM.
 
-    V2 uses a unified JSON structure. Status and score are now determined
+    Expects a unified JSON structure. Status and score are determined
     by code, not extracted from LLM output.
 
     Args:
@@ -128,30 +123,30 @@ def parse_clarification_response_v2(raw_response: str) -> Dict[str, Any]:
     try:
         data = json.loads(json_str)
     except json.JSONDecodeError as e:
-        raise ParseError(f"Failed to parse v2 response JSON: {e}\nContent: {json_str}")
+        raise ParseError(f"Failed to parse response JSON: {e}\nContent: {json_str}")
 
     # Validate expected structure (status removed - code determines completion)
     required_keys = {"round", "questions", "state", "data"}
     missing_keys = required_keys - set(data.keys())
     if missing_keys:
-        raise ParseError(f"V2 response missing required keys: {missing_keys}")
+        raise ParseError(f"Response missing required keys: {missing_keys}")
 
     # Validate state structure (score removed - code calculates it)
     state = data.get("state", {})
     state_required = {"collected"}
     state_missing = state_required - set(state.keys())
     if state_missing:
-        raise ParseError(f"V2 state missing required keys: {state_missing}")
+        raise ParseError(f"State missing required keys: {state_missing}")
 
     return data
 
 
-def build_state_update_for_v2_response(
+def build_state_update(
     state: "ClarificationState",
     parsed_response: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
-    Build a state update dictionary for a v2 response.
+    Build a state update dictionary from a parsed LLM response.
 
     Calculates completeness score and determines completion status using
     code-based logic instead of relying on LLM output.

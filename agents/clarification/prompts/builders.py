@@ -9,22 +9,20 @@ import json
 from typing import TYPE_CHECKING, Dict, Any, List, Optional
 
 from agents.clarification.prompts.templates import (
-    SystemPromptConfigV2,
-    V2_SYSTEM_PROMPT_TEMPLATE,
+    SystemPromptConfig,
+    SYSTEM_PROMPT_TEMPLATE,
 )
 
 if TYPE_CHECKING:
     from agents.clarification.schemas import ClarificationState
 
 
-# V2 Prompt Builders
-
 def get_initial_data_object() -> Dict[str, Any]:
     """
-    Get the initial data object with all v2 fields set to null.
+    Get the initial data object with all fields set to null.
 
     Returns:
-        Dictionary with all v2 data fields initialized to null
+        Dictionary with all data fields initialized to null
     """
     return {
         # Tier 1: Critical
@@ -53,11 +51,9 @@ def get_initial_data_object() -> Dict[str, Any]:
     }
 
 
-def build_system_prompt_v2(state: "ClarificationState") -> str:
+def build_system_prompt(state: "ClarificationState") -> str:
     """
-    Build the complete system prompt for the v2 clarification agent.
-
-    Uses the v2 template with dynamic context.
+    Build the complete system prompt for the clarification agent.
 
     Args:
         state: Current clarification state
@@ -69,7 +65,7 @@ def build_system_prompt_v2(state: "ClarificationState") -> str:
     cities = state.get("destination_cities")
     cities_str = ", ".join(cities) if cities else None
 
-    config = SystemPromptConfigV2(
+    config = SystemPromptConfig(
         user_name=state["user_name"],
         citizenship=state["citizenship"],
         health_limitations=state.get("health_limitations"),
@@ -87,12 +83,12 @@ def build_system_prompt_v2(state: "ClarificationState") -> str:
         budget_scope=state["budget_scope"],
     )
 
-    return config.format_prompt(V2_SYSTEM_PROMPT_TEMPLATE)
+    return config.format_prompt(SYSTEM_PROMPT_TEMPLATE)
 
 
-def build_user_prompt_v2(state: "ClarificationState") -> str:
+def build_user_prompt(state: "ClarificationState") -> str:
     """
-    Build the user prompt for the v2 clarification agent.
+    Build the user prompt for the clarification agent.
 
     Includes cumulative data object (JSON) for LLM context,
     user's latest responses (for rounds 2+), and round instruction.

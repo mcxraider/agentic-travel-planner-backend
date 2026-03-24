@@ -54,7 +54,7 @@ class ClarificationState(TypedDict):
     # Accumulated answers (built up over rounds)
     collected_data: dict
 
-    # V2: Cumulative data object returned every round
+    # Cumulative data object returned every round
     data: Optional[dict]
 
     # Messages for tracking conversation history
@@ -69,8 +69,8 @@ class ClarificationState(TypedDict):
 # =============================================================================
 
 
-class QuestionV2(BaseModel):
-    """A single clarification question (v2)."""
+class Question(BaseModel):
+    """A single clarification question."""
 
     id: str = Field(description="Unique identifier in q<round>_<num> format")
     field: str = Field(description="The data field this question populates")
@@ -91,9 +91,9 @@ class QuestionV2(BaseModel):
     )
 
 
-class QuestionsStateV2(BaseModel):
+class QuestionsState(BaseModel):
     """
-    State information returned with questions (v2).
+    State information returned with questions.
 
     Note: score, missing_tier1, and missing_tier2 are calculated by code,
     not provided by the LLM. The LLM only provides collected and conflicts_detected.
@@ -117,9 +117,9 @@ class QuestionsStateV2(BaseModel):
     )
 
 
-class ClarificationDataV2(BaseModel):
+class ClarificationData(BaseModel):
     """
-    Cumulative data object returned every round (v2).
+    Cumulative data object returned every round.
 
     All fields are Optional - returns null for uncollected fields.
     """
@@ -159,9 +159,9 @@ class ClarificationDataV2(BaseModel):
         populate_by_name = True
 
 
-class QuestionsResponseV2(BaseModel):
+class QuestionsResponse(BaseModel):
     """
-    Structured response from LLM containing questions (v2).
+    Structured response from LLM containing questions.
 
     This model validates the JSON output from the LLM during
     clarification rounds.
@@ -171,11 +171,11 @@ class QuestionsResponseV2(BaseModel):
     """
 
     round: int = Field(ge=1, le=4, description="Current round number (1-4)")
-    questions: List[QuestionV2] = Field(
+    questions: List[Question] = Field(
         default_factory=list, description="Questions for this round"
     )
-    state: QuestionsStateV2 = Field(description="Current state information")
-    data: ClarificationDataV2 = Field(description="Cumulative data object")
+    state: QuestionsState = Field(description="Current state information")
+    data: ClarificationData = Field(description="Cumulative data object")
 
 
 # =============================================================================
@@ -237,28 +237,28 @@ class SessionStatusResponse(BaseModel):
 
 
 # =============================================================================
-# V2 API Request/Response Models
+# API Request/Response Models (continued)
 # =============================================================================
 
 
-class StartSessionResponseV2(BaseModel):
-    """Response after starting a clarification session (v2)."""
+class StartSessionResponse(BaseModel):
+    """Response after starting a clarification session."""
 
     session_id: str = Field(description="Unique session identifier")
     round: int = Field(description="Current round number")
-    questions: List[QuestionV2] = Field(description="Questions for this round")
-    state: QuestionsStateV2 = Field(description="Current state information")
-    data: ClarificationDataV2 = Field(description="Cumulative data object")
+    questions: List[Question] = Field(description="Questions for this round")
+    state: QuestionsState = Field(description="Current state information")
+    data: ClarificationData = Field(description="Cumulative data object")
 
 
-class RespondResponseV2(BaseModel):
-    """Response after submitting answers (v2)."""
+class RespondResponse(BaseModel):
+    """Response after submitting answers."""
 
     session_id: str = Field(description="Session identifier")
     complete: bool = Field(description="Whether clarification is complete")
     round: int = Field(description="Current round number")
-    questions: List[QuestionV2] = Field(
+    questions: List[Question] = Field(
         default_factory=list, description="Next questions (empty if complete)"
     )
-    state: QuestionsStateV2 = Field(description="Current state information")
-    data: ClarificationDataV2 = Field(description="Cumulative data object")
+    state: QuestionsState = Field(description="Current state information")
+    data: ClarificationData = Field(description="Cumulative data object")

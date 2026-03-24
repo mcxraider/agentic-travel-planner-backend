@@ -9,13 +9,12 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-class ClarificationOutputV2(BaseModel):
+class ClarificationOutput(BaseModel):
     """
-    Contract for clarification agent output (v2).
+    Contract for clarification agent output.
 
     This model defines the exact structure of data that flows from
     the clarification agent to downstream agents (research, planner).
-    Matches the v2 data schema with tiered fields.
     """
 
     # Tier 1: Critical
@@ -119,17 +118,17 @@ class ClarificationOutputV2(BaseModel):
         data: dict,
         completeness_score: int = 0,
         rounds_completed: int = 0,
-    ) -> "ClarificationOutputV2":
+    ) -> "ClarificationOutput":
         """
-        Factory method to create output from v2 data dict.
+        Factory method to create output from a data dict.
 
         Args:
-            data: The data dict from ClarificationDataV2 or LLM response
+            data: The data dict from ClarificationData or LLM response
             completeness_score: Final completeness score
             rounds_completed: Number of rounds completed
 
         Returns:
-            ClarificationOutputV2 instance
+            ClarificationOutput instance
         """
         return cls(
             # Tier 1

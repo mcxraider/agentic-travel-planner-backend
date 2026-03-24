@@ -30,7 +30,7 @@ class OrchestratorState(TypedDict):
     travel_party: str
     budget_scope: str
 
-    # Clarification preferences (from ClarificationOutputV2)
+    # Clarification preferences (from ClarificationOutput)
     clarification_output: Optional[dict]
 
     # Agent handoff slots (populated as agents complete)

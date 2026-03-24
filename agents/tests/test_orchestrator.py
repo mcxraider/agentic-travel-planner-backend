@@ -40,7 +40,7 @@ def _make_trip_context():
 
 
 def _make_clarification_output():
-    """Create a mock ClarificationOutputV2 dict for testing."""
+    """Create a mock ClarificationOutput dict for testing."""
     return {
         "activity_preferences": ["nature/hiking", "food/gastronomy"],
         "pace_preference": "moderate",
