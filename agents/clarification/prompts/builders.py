@@ -106,7 +106,9 @@ def build_user_prompt(state: "ClarificationState") -> str:
     current_round = state["current_round"]
 
     if current_round > 1:
-        parts.append(f"Current collected data:\n{json.dumps(data, indent=2, ensure_ascii=True, sort_keys=True)}")
+        parts.append(
+            f"Current collected data:\n{json.dumps(data, indent=2, ensure_ascii=True, sort_keys=True)}"
+        )
     else:
         # manually append user trip details for round 1
         parts.append(f"Round 1 - No Data has currently been collected.")

@@ -6,9 +6,10 @@ automatic retries using tenacity.
 """
 
 import os
-from typing import List, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from openai import OpenAI, APIError, RateLimitError, APITimeoutError, APIConnectionError
+from pydantic import BaseModel
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -45,13 +46,16 @@ def get_cached_client() -> OpenAI:
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((APIError, RateLimitError, APITimeoutError, APIConnectionError)),
+    retry=retry_if_exception_type(
+        (APIError, RateLimitError, APITimeoutError, APIConnectionError)
+    ),
     reraise=True,
 )
 def call_llm_with_usage(
     messages: List[Dict[str, str]],
     model: str = "gpt-4.1-mini",
     client: Optional[OpenAI] = None,
+    response_format: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, Dict[str, int]]:
     """
     Call the OpenAI Chat Completion API and return content with token usage.
@@ -60,6 +64,7 @@ def call_llm_with_usage(
         messages: List of message dicts with 'role' and 'content' keys
         model: Model identifier to use (default: gpt-4.1-mini)
         client: Optional OpenAI client instance. If not provided, uses cached client.
+        response_format: Optional OpenAI response format payload
 
     Returns:
         Tuple of (response content, usage dict with input/output/total tokens)
@@ -73,6 +78,7 @@ def call_llm_with_usage(
     response = client.chat.completions.create(
         model=model,
         messages=messages,
+        response_format=response_format,
     )
 
     content = response.choices[0].message.content.strip()
@@ -90,6 +96,7 @@ def get_llm_response_with_usage(
     user_prompt: str,
     system_prompt: str,
     model: str = "gpt-4.1-mini",
+    response_format: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, Dict[str, int]]:
     """
     Get LLM response with token usage information.
@@ -102,6 +109,7 @@ def get_llm_response_with_usage(
         user_prompt: The user message content
         system_prompt: The system message content
         model: Model identifier to use
+        response_format: Optional OpenAI response format payload
 
     Returns:
         Tuple of (response content, usage dict with input/output/total tokens)
@@ -110,4 +118,58 @@ def get_llm_response_with_usage(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
-    return call_llm_with_usage(messages, model=model, client=client)
+    return call_llm_with_usage(
+        messages,
+        model=model,
+        client=client,
+        response_format=response_format,
+    )
+
+
+def parse_llm_response(
+    client: OpenAI,
+    user_prompt: str,
+    system_prompt: str,
+    response_model: Type[BaseModel],
+    model: str = "gpt-4.1-mini",
+) -> Tuple[BaseModel, Dict[str, int]]:
+    """
+    Call OpenAI structured output parsing and return a validated model instance.
+
+    Args:
+        client: OpenAI client instance
+        user_prompt: The user message content
+        system_prompt: The system message content
+        response_model: Pydantic model used as the structured response schema
+        model: Model identifier to use
+
+    Returns:
+        Tuple of (validated Pydantic model instance, usage dict)
+
+    Raises:
+        LengthFinishReasonError: If the response is truncated
+        APIError, RateLimitError, APITimeoutError, APIConnectionError:
+            For transient OpenAI failures
+        ValueError: If parsing returns no structured object
+    """
+    completion = client.beta.chat.completions.parse(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        response_format=response_model,
+    )
+    parsed = completion.choices[0].message.parsed
+    if parsed is None:
+        raise ValueError(
+            f"Structured output parsing returned no object for {response_model.__name__}."
+        )
+
+    usage = {
+        "input_tokens": completion.usage.prompt_tokens if completion.usage else 0,
+        "output_tokens": completion.usage.completion_tokens if completion.usage else 0,
+        "total_tokens": completion.usage.total_tokens if completion.usage else 0,
+    }
+
+    return parsed, usage

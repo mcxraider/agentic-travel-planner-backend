@@ -1,0 +1,161 @@
+[
+  {
+    "destination": "Tokyo, Japan",
+    "destination_cities": [
+      "Tokyo"
+    ],
+    "start_date": "2026-04-10",
+    "end_date": "2026-04-17",
+    "trip_duration": 7,
+    "budget": 2200.0,
+    "currency": "USD",
+    "travel_party": "couple",
+    "activity_preferences": [
+      "food tours",
+      "markets",
+      "temples"
+    ],
+    "pace_preference": "moderate",
+    "dining_style": [
+      "local street food",
+      "sit-down restaurants"
+    ],
+    "accommodation_style": [
+      "boutique hotel",
+      "central location"
+    ],
+    "mobility_level": "full",
+    "dietary_restrictions": null,
+    "top_3_must_dos": {
+      "1": "Tsukiji Outer Market",
+      "2": "teamLab Planets",
+      "3": "Senso-ji Temple"
+    },
+    "budget_priority": "experiences_over_comfort",
+    "tourist_vs_local": "mix",
+    "clarification_output": null,
+    "weather_output": null,
+    "destination_overview_output": null,
+    "budget_analysis_output": null,
+    "accommodation_output": null,
+    "activities_output": null,
+    "dining_output": null,
+    "transportation_output": null,
+    "curated_highlights_output": null,
+    "research_output": null,
+    "research_complete": false,
+    "repair_target": null,
+    "repair_attempt_count": 0,
+    "last_bad_response": null,
+    "last_repaired_node": null,
+    "errors": [],
+    "messages": [],
+    "session_id": "batch-review-01-tokyo-foodie-couple"
+  },
+  {
+    "destination": "Paris, France",
+    "destination_cities": [
+      "Paris"
+    ],
+    "start_date": "2026-05-14",
+    "end_date": "2026-05-19",
+    "trip_duration": 5,
+    "budget": 5000.0,
+    "currency": "USD",
+    "travel_party": "couple celebrating anniversary",
+    "activity_preferences": [
+      "fine dining",
+      "art museums",
+      "river cruises"
+    ],
+    "pace_preference": "relaxed",
+    "dining_style": [
+      "fine dining",
+      "wine bars"
+    ],
+    "accommodation_style": [
+      "luxury hotel",
+      "romantic neighborhood"
+    ],
+    "mobility_level": "full",
+    "dietary_restrictions": null,
+    "top_3_must_dos": {
+      "1": "Seine dinner cruise",
+      "2": "Musee d'Orsay",
+      "3": "Eiffel Tower at sunset"
+    },
+    "budget_priority": "comfort_over_savings",
+    "tourist_vs_local": "balanced",
+    "clarification_output": null,
+    "weather_output": null,
+    "destination_overview_output": null,
+    "budget_analysis_output": null,
+    "accommodation_output": null,
+    "activities_output": null,
+    "dining_output": null,
+    "transportation_output": null,
+    "curated_highlights_output": null,
+    "research_output": null,
+    "research_complete": false,
+    "repair_target": null,
+    "repair_attempt_count": 0,
+    "last_bad_response": null,
+    "last_repaired_node": null,
+    "errors": [],
+    "messages": [],
+    "session_id": "batch-review-02-paris-luxury-anniversary"
+  },
+  {
+    "destination": "Bangkok, Thailand",
+    "destination_cities": [
+      "Bangkok"
+    ],
+    "start_date": "2026-01-08",
+    "end_date": "2026-01-13",
+    "trip_duration": 5,
+    "budget": 600.0,
+    "currency": "USD",
+    "travel_party": "solo traveler",
+    "activity_preferences": [
+      "street food",
+      "temples",
+      "night markets"
+    ],
+    "pace_preference": "fast-paced",
+    "dining_style": [
+      "street food",
+      "casual"
+    ],
+    "accommodation_style": [
+      "hostel",
+      "budget hotel"
+    ],
+    "mobility_level": "full",
+    "dietary_restrictions": null,
+    "top_3_must_dos": {
+      "1": "Chatuchak Market",
+      "2": "Wat Pho",
+      "3": "Chinatown food crawl"
+    },
+    "budget_priority": "maximize_value",
+    "tourist_vs_local": "local",
+    "clarification_output": null,
+    "weather_output": null,
+    "destination_overview_output": null,
+    "budget_analysis_output": null,
+    "accommodation_output": null,
+    "activities_output": null,
+    "dining_output": null,
+    "transportation_output": null,
+    "curated_highlights_output": null,
+    "research_output": null,
+    "research_complete": false,
+    "repair_target": null,
+    "repair_attempt_count": 0,
+    "last_bad_response": null,
+    "last_repaired_node": null,
+    "errors": [],
+    "messages": [],
+    "session_id": "batch-review-03-bangkok-budget-solo"
+  }
+]

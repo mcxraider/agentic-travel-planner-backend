@@ -23,17 +23,25 @@ class TestIsFieldAnswered:
     def test_none_value_returns_false(self):
         """None values should be considered unanswered."""
         assert is_field_answered({}, "activity_preferences") is False
-        assert is_field_answered({"activity_preferences": None}, "activity_preferences") is False
+        assert (
+            is_field_answered({"activity_preferences": None}, "activity_preferences")
+            is False
+        )
 
     def test_empty_string_returns_false(self):
         """Empty strings should be considered unanswered."""
         assert is_field_answered({"pace_preference": ""}, "pace_preference") is False
         assert is_field_answered({"pace_preference": "  "}, "pace_preference") is False
-        assert is_field_answered({"pace_preference": "\t\n"}, "pace_preference") is False
+        assert (
+            is_field_answered({"pace_preference": "\t\n"}, "pace_preference") is False
+        )
 
     def test_empty_list_returns_false(self):
         """Empty lists should be considered unanswered."""
-        assert is_field_answered({"activity_preferences": []}, "activity_preferences") is False
+        assert (
+            is_field_answered({"activity_preferences": []}, "activity_preferences")
+            is False
+        )
 
     def test_empty_dict_returns_false(self):
         """Empty dicts should be considered unanswered."""
@@ -41,23 +49,57 @@ class TestIsFieldAnswered:
 
     def test_valid_string_returns_true(self):
         """Non-empty strings should be considered answered."""
-        assert is_field_answered({"pace_preference": "relaxed"}, "pace_preference") is True
-        assert is_field_answered({"pace_preference": "moderate"}, "pace_preference") is True
+        assert (
+            is_field_answered({"pace_preference": "relaxed"}, "pace_preference") is True
+        )
+        assert (
+            is_field_answered({"pace_preference": "moderate"}, "pace_preference")
+            is True
+        )
 
     def test_valid_list_returns_true(self):
         """Non-empty lists should be considered answered."""
-        assert is_field_answered({"activity_preferences": ["hiking"]}, "activity_preferences") is True
-        assert is_field_answered({"dining_style": ["casual", "fine dining"]}, "dining_style") is True
+        assert (
+            is_field_answered(
+                {"activity_preferences": ["hiking"]}, "activity_preferences"
+            )
+            is True
+        )
+        assert (
+            is_field_answered(
+                {"dining_style": ["casual", "fine dining"]}, "dining_style"
+            )
+            is True
+        )
 
     def test_top_3_must_dos_empty_values_returns_false(self):
         """top_3_must_dos with all None/empty values should be unanswered."""
-        assert is_field_answered({"top_3_must_dos": {"1": None, "2": None, "3": None}}, "top_3_must_dos") is False
-        assert is_field_answered({"top_3_must_dos": {"1": "", "2": "", "3": ""}}, "top_3_must_dos") is False
+        assert (
+            is_field_answered(
+                {"top_3_must_dos": {"1": None, "2": None, "3": None}}, "top_3_must_dos"
+            )
+            is False
+        )
+        assert (
+            is_field_answered(
+                {"top_3_must_dos": {"1": "", "2": "", "3": ""}}, "top_3_must_dos"
+            )
+            is False
+        )
 
     def test_top_3_must_dos_partial_values_returns_true(self):
         """top_3_must_dos with at least one value should be answered."""
-        assert is_field_answered({"top_3_must_dos": {"1": "hiking"}}, "top_3_must_dos") is True
-        assert is_field_answered({"top_3_must_dos": {"1": "hiking", "2": None, "3": None}}, "top_3_must_dos") is True
+        assert (
+            is_field_answered({"top_3_must_dos": {"1": "hiking"}}, "top_3_must_dos")
+            is True
+        )
+        assert (
+            is_field_answered(
+                {"top_3_must_dos": {"1": "hiking", "2": None, "3": None}},
+                "top_3_must_dos",
+            )
+            is True
+        )
 
     def test_integer_values_return_true(self):
         """Integer values (including 0) should be considered answered."""
@@ -166,9 +208,7 @@ class TestCalculateCompletenessScore:
     def test_tier3_fields_score_10_each_with_elevation(self):
         """Tier 3 fields score 10 points each when elevated."""
         data = {"wifi_need": "essential"}
-        result = calculate_completeness_score(
-            data, work_obligations="remote work"
-        )
+        result = calculate_completeness_score(data, work_obligations="remote work")
         assert result.score == 10  # Elevated to Tier 1 value
         assert "wifi_need" in result.tier3_answered
         assert "wifi_need" in result.elevated_tier3_fields

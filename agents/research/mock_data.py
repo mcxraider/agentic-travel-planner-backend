@@ -97,9 +97,7 @@ def _generate_city_pois(
     # Always include core POIs
     for category, poi in _DEFAULT_POIS.items():
         # Create a city-specific copy
-        city_poi = poi.model_copy(
-            update={"name": f"{city_name} {poi.name}"}
-        )
+        city_poi = poi.model_copy(update={"name": f"{city_name} {poi.name}"})
         pois.append(city_poi)
 
     return pois
@@ -183,7 +181,9 @@ def generate_mock_research(
     for city_name in cities_to_research:
         city = CityResearch(
             city_name=city_name,
-            country=destination.split(",")[-1].strip() if "," in destination else destination,
+            country=destination.split(",")[-1].strip()
+            if "," in destination
+            else destination,
             description=f"A vibrant destination in {destination} with diverse attractions",
             recommended_days=days_per_city,
             pois=_generate_city_pois(city_name, activity_preferences),

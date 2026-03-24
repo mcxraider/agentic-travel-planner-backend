@@ -64,7 +64,9 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         client = get_cached_client()
 
         # Load cached system prompt (built once at session start for OpenAI caching)
-        system_prompt = load_system_prompt(session_id) if session_id != "unknown" else None
+        system_prompt = (
+            load_system_prompt(session_id) if session_id != "unknown" else None
+        )
 
         # Fallback: rebuild if cache miss (defensive)
         if system_prompt is None:
@@ -75,7 +77,9 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         user_prompt = build_user_prompt(state)
 
         # Get debug logger from registry if session_id is available
-        debug_logger = get_or_create_logger(session_id) if session_id != "unknown" else None
+        debug_logger = (
+            get_or_create_logger(session_id) if session_id != "unknown" else None
+        )
 
         # Log collected fields so far
         filled_fields = [k for k, v in state.get("data", {}).items() if v is not None]
@@ -117,9 +121,9 @@ def clarification_node(state: ClarificationState) -> Dict[str, Any]:
         result = build_state_update(state, parsed_response)
 
         # Log outcome
-        is_complete = result.get('clarification_complete', False)
-        new_score = result.get('completeness_score', 0)
-        num_questions = len(result.get('current_questions', {}).get('questions', []))
+        is_complete = result.get("clarification_complete", False)
+        new_score = result.get("completeness_score", 0)
+        num_questions = len(result.get("current_questions", {}).get("questions", []))
         logger.info(
             f"{_log}Node finished | complete={is_complete}, score={new_score}/100, "
             f"questions_generated={num_questions}"
