@@ -123,9 +123,11 @@ def _make_mock_research_output_v2():
                     {
                         "name": "Tegallalang Rice Terrace",
                         "category": "nature",
+                        "neighborhood": "Tegallalang",
                         "description": "Scenic rice terrace walk near Ubud.",
                         "estimated_duration_hours": 2.0,
                         "estimated_cost_usd": 5.0,
+                        "travel_time_from_centre_mins": 20,
                         "best_time_to_visit": "early morning",
                         "booking_required": False,
                         "tags": ["nature", "photography"],

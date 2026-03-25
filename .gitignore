@@ -7,7 +7,7 @@ ClAUDE.md
 # C extensions
 *.so
 .vscode/
-
+.DS_Store
 # Prompt cache directory
 cache/
 

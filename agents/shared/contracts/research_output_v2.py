@@ -204,12 +204,20 @@ class Activity(BaseModel):
 
     name: str = Field(description="Specific real-world activity or attraction name")
     category: str = Field(description="High-level activity category")
+    neighborhood: str = Field(
+        description="Neighborhood or district where the activity is located"
+    )
     description: str = Field(description="Short description of the activity")
     estimated_duration_hours: float = Field(
         ge=0, description="Typical time required in hours"
     )
     estimated_cost_usd: Optional[float] = Field(
         default=None, description="Estimated cost in USD if known"
+    )
+    travel_time_from_centre_mins: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Approximate travel time in minutes from the central accommodation zone",
     )
     best_time_to_visit: Optional[str] = Field(
         default=None, description="Best timing for the activity"

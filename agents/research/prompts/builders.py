@@ -148,7 +148,10 @@ def build_budget_prompts(state: "ResearchState") -> Tuple[str, str]:
     Returns:
         Tuple of (system_prompt, user_prompt)
     """
+    city = _primary_city(state)
     config = BudgetPromptConfig(
+        destination=state["destination"],
+        city=city,
         budget=state["budget"],
         currency=state["currency"],
         trip_duration=state["trip_duration"],
@@ -163,6 +166,7 @@ def build_budget_prompts(state: "ResearchState") -> Tuple[str, str]:
                 "Budget inputs",
                 {
                     "destination": state["destination"],
+                    "city": city,
                     "trip_duration": state["trip_duration"],
                     "budget": state["budget"],
                     "currency": state["currency"],

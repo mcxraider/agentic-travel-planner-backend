@@ -83,6 +83,8 @@ class OverviewPromptConfig(BasePromptConfig):
 class BudgetPromptConfig(BasePromptConfig):
     """Configuration for budget analysis prompt generation."""
 
+    destination: str = Field(description="Destination country or region")
+    city: str = Field(description="Target city or destination unit")
     budget: float = Field(description="In-destination budget amount")
     currency: str = Field(description="Budget currency")
     trip_duration: int = Field(description="Trip duration in days")
@@ -91,6 +93,8 @@ class BudgetPromptConfig(BasePromptConfig):
 
     def to_prompt_context(self) -> Dict[str, str]:
         return {
+            "destination": self.destination,
+            "city": self.city,
             "budget": f"{self.budget:.2f}",
             "currency": self.currency,
             "trip_duration": str(self.trip_duration),
@@ -154,11 +158,16 @@ class DiningPromptConfig(BasePromptConfig):
     travel_party: str = Field(description="Travel party descriptor")
 
     def to_prompt_context(self) -> Dict[str, str]:
+        dietary_restrictions_line = (
+            f"Dietary restrictions: {self.dietary_restrictions}"
+            if self.dietary_restrictions
+            else "No dietary restrictions."
+        )
         return {
             "destination": self.destination,
             "city": self.city,
             "dining_style": _format_optional_list(self.dining_style),
-            "dietary_restrictions": self.dietary_restrictions or "None specified",
+            "dietary_restrictions_line": dietary_restrictions_line,
             "budget_tier": self.budget_tier,
             "travel_party": self.travel_party,
         }
@@ -264,6 +273,8 @@ Produce structured output for {city}, {destination} covering the travel window f
 Use current seasonal norms, not exact live forecasts.
 
 # Requirements
+- Derive the season from the travel window for the correct hemisphere.
+- Output season as exactly one of: spring, summer, autumn, winter.
 - Focus on conditions relevant to trip planning.
 - Temperature range must be in Celsius.
 - Weather notes should be practical and concise.
@@ -296,6 +307,7 @@ Return content that matches the DestinationOverviewOutput schema exactly.
 BUDGET_SYSTEM_PROMPT_TEMPLATE = """# Role
 You are a travel budget research sub-agent.
 
+The traveler is going to {city}, {destination}.
 The user's budget of {budget} {currency} is their IN-DESTINATION spending budget only.
 This amount covers accommodation, food, activities, and local transport for {trip_duration} days.
 Flights, visas, travel insurance, and pre-trip purchases are already handled separately.
@@ -306,6 +318,7 @@ Allocate this full {budget} {currency} across the four in-destination categories
 - Budget priority: {budget_priority}
 
 # Requirements
+- Account for destination purchasing power when assessing realism and category allocation.
 - Convert the result to USD if needed for the schema.
 - Produce a realistic daily budget.
 - Ensure the category breakdown sums to total_available_usd.
@@ -359,6 +372,8 @@ Recommend concrete activities for {city}, {destination}.
 - Match recommendations to stated preferences and constraints.
 - Mix iconic and aligned picks based on the tourist/local preference.
 - Include timing, estimated duration, and cost where useful.
+- Assign each activity a neighborhood or district name so the planner can group nearby stops.
+- Set travel_time_from_centre_mins as the approximate travel time from the central accommodation zone in {city}.
 
 # Output
 Return content that matches the ActivitiesOutput schema exactly.
@@ -372,9 +387,9 @@ Recommend dining options for {city}, {destination}.
 
 # Traveler Context
 - Dining style: {dining_style}
-- Dietary restrictions: {dietary_restrictions}
 - Budget tier: {budget_tier}
 - Travel party: {travel_party}
+{dietary_restrictions_line}
 
 # Requirements
 - Recommend specific, real dining venues or food markets when possible.
@@ -429,6 +444,11 @@ Dining JSON:
 - Prioritize items that clearly fit the traveler profile.
 - Include a mix of signature experiences, dining, and hidden gems when supported.
 - Avoid repeating generic statements already covered in the overview.
+- Return between 6 and 10 highlights.
+- Each title must exactly match the source item name from the activity or dining input.
+- Include at least 2 dining highlights.
+- Include at least 1 hidden_gem highlight.
+- category must be exactly one of: experience, dining, hidden_gem.
 
 # Output
 Return content that matches the HighlightsOutput schema exactly.
